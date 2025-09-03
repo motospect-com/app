@@ -15,7 +15,7 @@ const VehicleVisualization = () => {
   const [scanType, setScanType] = useState('N/A');
 
   useEffect(() => {
-    const wsUrl = process.env.REACT_APP_BACKEND_WS_URL || 'ws://localhost:8080/ws';
+    const wsUrl = process.env.REACT_APP_BACKEND_WS_URL || 'ws://backend:8080/ws';
     const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (event) => {

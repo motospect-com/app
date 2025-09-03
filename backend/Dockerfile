@@ -4,9 +4,10 @@ FROM python:3.9-slim
 # Ustaw katalog roboczy
 WORKDIR /app
 
-# Skopiuj plik z zależnościami i zainstaluj je
+# Skopiuj pliki z zależnościami i zainstaluj je
 COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements-dev.txt requirements-dev.txt
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
 
 # Skopiuj resztę kodu aplikacji
 COPY . .

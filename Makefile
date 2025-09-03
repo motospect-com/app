@@ -4,7 +4,7 @@
 
 # Build Docker images
 build:
-	docker-compose build
+	docker-compose build --no-cache
 
 # Start services in detached mode
 up:
@@ -25,7 +25,7 @@ test:
 
 # Run backend tests
 test-backend:
-	pytest
+	docker-compose exec backend python -m pytest
 
 # Run frontend tests inside the container
 test-frontend:

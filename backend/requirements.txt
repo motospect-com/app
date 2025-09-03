@@ -5,6 +5,3 @@ numpy
 python-multipart
 websockets
 
-# Test dependencies
-pytest
-pytest-asyncio
