@@ -442,3 +442,99 @@ async def integrate_workshop_system(workshop_api: WorkshopAPI):
 - Cloud sync z centralną bazą przypadków
 
 System MOTOSPECT stanowi kompleksowe rozwiązanie dostosowane do realnych potrzeb warsztatów, oferując profesjonalne możliwości w przystępnej cenie i formie.
+
+---
+
+# Dokumentacja deweloperska (MVP Pilot)
+
+## Szybki start (dev)
+
+- Frontend: React (CRA)
+- Backend: FastAPI + WebSocket
+- Orkiestracja: Docker Compose
+
+Wymagania: Docker, Docker Compose
+
+1. Skonfiguruj `.env` (już w repo):
+   - `BACKEND_PORT=8084`
+   - `FRONTEND_PORT=3030`
+   - `REACT_APP_BACKEND_WS_URL=ws://localhost:8084/ws`
+2. Uruchom środowisko:
+   - `docker compose up -d --build`
+3. Wejdź na UI: http://localhost:3030/
+4. API ping: http://localhost:8084/
+
+## Struktura kodu
+
+- `backend/main.py` – FastAPI, CORS, REST API skanu (start/stop/wyniki)
+- `backend/websocket_handler.py` – endpoint `ws://.../ws` ze strumieniem danych (mock)
+- `backend/data_generator.py` – generatory danych (tof/thermal/uv/paint)
+- `frontend/src/VehicleVisualization.jsx` – wizualizacja chmury punktów (Three.js)
+- `docker-compose.yml` – konfiguracja portów i trybu dev
+
+## API (MVP)
+
+- `GET /` → `{ message: "Welcome to the Motospect API" }`
+- `POST /api/scan/start` body:
+  ```json
+  { "vehicle_id": "ABC123" }
+  ```
+  response: `{ "scan_id": "<uuid>", "status": "scanning" }`
+- `POST /api/scan/stop/{scan_id}` → `{ "scan_id": "...", "status": "stopped" }`
+- `GET /api/scan/{scan_id}/results` → `{ "scan_id": "...", "data": { ...mock... } }`
+
+## WebSocket
+
+- URL: `ws://localhost:8084/ws` (lub `REACT_APP_BACKEND_WS_URL`)
+- Payload (przykład):
+  ```json
+  {
+    "scan_type": "thermal",
+    "points": [[x,y,z], ...],
+    "temperatures": [..]
+  }
+  ```
+
+## Uruchamianie i logi
+
+- Start/rebuild: `docker compose up -d --build`
+- Logi backendu: `docker compose logs -f backend`
+- Logi frontendu: `docker compose logs -f frontend`
+
+## Testy ręczne (smoke)
+
+1. Sprawdź API root:
+   ```bash
+   curl -s http://localhost:8084/
+   ```
+2. Start skanu:
+   ```bash
+   curl -s -X POST http://localhost:8084/api/scan/start -H 'Content-Type: application/json' -d '{"vehicle_id":"DEMO"}'
+   ```
+   Zapisz `scan_id` z odpowiedzi.
+3. Pobierz wyniki:
+   ```bash
+   curl -s http://localhost:8084/api/scan/<scan_id>/results | jq .
+   ```
+4. Zatrzymaj skan:
+   ```bash
+   curl -s -X POST http://localhost:8084/api/scan/stop/<scan_id>
+   ```
+5. UI: odśwież http://localhost:3030/ – na panelu `VehicleVisualization` powinny pojawiać się punkty i typ skanu.
+
+## Plan oprogramowania – Pilot (2 tygodnie)
+
+- [x] WebSocket mock i wizualizacja 3D (Three.js) – `VehicleVisualization.jsx`
+- [x] CORS i minimalne REST API (start/stop/wyniki) – `backend/main.py`
+- [x] Stabilizacja dev (usunięcie brakujących ikon, wyłączenie StrictMode)
+- [ ] Multipleksacja kanałów WS (rgb_meta/thermal/audio/tof)
+- [ ] Panel Live: RGB, termika, audio-level/beam, profil ToF
+- [ ] Progi anomalii (temp/dB/odległość) + alerty w UI
+- [ ] Snapshot raportu (JSON + PNG) i pobranie
+- [ ] Testy poligonowe (10–20 aut) – logi i obserwacje
+
+## Notatki dot. DEV
+
+- CRA w trybie dev domyślnie używa WebSocketów – ustawione `WDS_SOCKET_PORT`/`HOST` w `docker-compose.yml`.
+- Przy błędach WS sprawdź: `curl -i http://localhost:8084/` oraz logi backendu.
+- Hard refresh przeglądarki po zmianach frontendu (Ctrl+Shift+R).
