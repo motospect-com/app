@@ -11,11 +11,21 @@ const mapValueToColor = (value, min, max) => {
 
 const VehicleVisualization = () => {
   const mountRef = useRef(null);
+  const sceneRef = useRef(null);
+  const cameraRef = useRef(null);
+  const rendererRef = useRef(null);
+  const geometryRef = useRef(null);
+  const materialRef = useRef(null);
+  const pointsRef = useRef(null);
+  const animationIdRef = useRef(null);
+
   const [scanData, setScanData] = useState(null);
   const [scanType, setScanType] = useState('N/A');
 
+  // WebSocket setup – prefers REACT_APP_... else fallback to window.hostname:8084
   useEffect(() => {
-    const wsUrl = process.env.REACT_APP_BACKEND_WS_URL || 'ws://backend:8080/ws';
+    const wsUrl =
+      process.env.REACT_APP_BACKEND_WS_URL || `ws://${window.location.hostname}:8084/ws`;
     const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (event) => {
@@ -25,28 +35,90 @@ const VehicleVisualization = () => {
     };
 
     return () => {
-      ws.close();
+      try {
+        ws.close();
+      } catch (_) {}
     };
   }, []);
 
+  // Initialize Three.js once
   useEffect(() => {
-    if (!scanData || !mountRef.current) return;
+    if (!mountRef.current || sceneRef.current) return;
+
+    const width = mountRef.current.clientWidth;
+    const height = mountRef.current.clientHeight;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, mountRef.current.clientWidth / mountRef.current.clientHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    camera.position.z = 150;
 
-    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
-    mountRef.current.innerHTML = ''; // Wyczyść poprzednią scenę
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
 
     const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(scanData.points.flat());
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const material = new THREE.PointsMaterial({ size: 0.5, vertexColors: true });
+    const points = new THREE.Points(geometry, material);
+    scene.add(points);
 
+    sceneRef.current = scene;
+    cameraRef.current = camera;
+    rendererRef.current = renderer;
+    geometryRef.current = geometry;
+    materialRef.current = material;
+    pointsRef.current = points;
+
+    const animate = () => {
+      animationIdRef.current = requestAnimationFrame(animate);
+      if (pointsRef.current) {
+        pointsRef.current.rotation.x += 0.001;
+        pointsRef.current.rotation.y += 0.001;
+      }
+      renderer.render(scene, camera);
+    };
+
+    animate();
+
+    const handleResize = () => {
+      if (!mountRef.current || !rendererRef.current || !cameraRef.current) return;
+      const w = mountRef.current.clientWidth;
+      const h = mountRef.current.clientHeight;
+      rendererRef.current.setSize(w, h);
+      cameraRef.current.aspect = w / h;
+      cameraRef.current.updateProjectionMatrix();
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
+      if (pointsRef.current) {
+        if (geometryRef.current) geometryRef.current.dispose();
+        if (materialRef.current) materialRef.current.dispose();
+      }
+      if (rendererRef.current && rendererRef.current.domElement && mountRef.current) {
+        try {
+          mountRef.current.removeChild(rendererRef.current.domElement);
+        } catch (_) {}
+        rendererRef.current.dispose?.();
+      }
+      sceneRef.current = null;
+      cameraRef.current = null;
+      rendererRef.current = null;
+      geometryRef.current = null;
+      materialRef.current = null;
+      pointsRef.current = null;
+    };
+  }, []);
+
+  // Update buffers when new scanData arrives
+  useEffect(() => {
+    if (!scanData || !geometryRef.current) return;
+
+    const pointsFlat = new Float32Array(scanData.points.flat());
     const colors = new Float32Array(scanData.points.length * 3);
-    let minVal, maxVal;
 
+    let minVal, maxVal;
     switch (scanData.scan_type) {
       case 'thermal':
         minVal = 20;
@@ -88,29 +160,25 @@ const VehicleVisualization = () => {
         break;
     }
 
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const geometry = geometryRef.current;
+    // If attributes do not exist or sizes changed, create new attributes
+    const posAttr = geometry.getAttribute('position');
+    if (!posAttr || posAttr.array.length !== pointsFlat.length) {
+      geometry.setAttribute('position', new THREE.BufferAttribute(pointsFlat, 3));
+    } else {
+      posAttr.array.set(pointsFlat);
+      posAttr.needsUpdate = true;
+    }
 
-    const material = new THREE.PointsMaterial({ size: 0.5, vertexColors: true });
-    const points = new THREE.Points(geometry, material);
-    scene.add(points);
+    const colorAttr = geometry.getAttribute('color');
+    if (!colorAttr || colorAttr.array.length !== colors.length) {
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    } else {
+      colorAttr.array.set(colors);
+      colorAttr.needsUpdate = true;
+    }
 
-    camera.position.z = 150;
-
-    const animate = () => {
-      requestAnimationFrame(animate);
-      points.rotation.x += 0.001;
-      points.rotation.y += 0.001;
-      renderer.render(scene, camera);
-    };
-
-    animate();
-
-    const currentMount = mountRef.current;
-    return () => {
-      if (currentMount && renderer.domElement) {
-        currentMount.removeChild(renderer.domElement);
-      }
-    };
+    geometry.computeBoundingSphere();
   }, [scanData]);
 
   return (

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from . import websocket_handler
+import websocket_handler
 
 app = FastAPI()
 

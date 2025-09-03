@@ -20,6 +20,7 @@ logs:
 
 # Run all tests
 test:
+	docker-compose up -d --build
 	make test-backend
 	make test-frontend
 

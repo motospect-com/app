@@ -1,7 +1,7 @@
 import asyncio
 import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from .data_generator import generate_scan_data
+from data_generator import generate_scan_data
 
 router = APIRouter()
 
