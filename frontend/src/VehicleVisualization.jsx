@@ -21,6 +21,11 @@ const VehicleVisualization = () => {
 
   const [scanData, setScanData] = useState(null);
   const [scanType, setScanType] = useState('N/A');
+  const [scanId, setScanId] = useState(null);
+  const [scanStatus, setScanStatus] = useState('idle');
+
+  const httpBase =
+    process.env.REACT_APP_BACKEND_HTTP_URL || `http://${window.location.hostname}:8084`;
 
   // WebSocket setup – prefers REACT_APP_... else fallback to window.hostname:8084
   useEffect(() => {
@@ -28,10 +33,25 @@ const VehicleVisualization = () => {
       process.env.REACT_APP_BACKEND_WS_URL || `ws://${window.location.hostname}:8084/ws`;
     const ws = new WebSocket(wsUrl);
 
+    ws.onopen = () => {
+      // eslint-disable-next-line no-console
+      console.info('[WS] connected', wsUrl);
+    };
+
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       setScanData(data);
       setScanType(data.scan_type || 'N/A');
+    };
+
+    ws.onerror = (e) => {
+      // eslint-disable-next-line no-console
+      console.warn('[WS] error', e);
+    };
+
+    ws.onclose = () => {
+      // eslint-disable-next-line no-console
+      console.info('[WS] closed');
     };
 
     return () => {
@@ -183,7 +203,55 @@ const VehicleVisualization = () => {
 
   return (
     <div>
-      <h3>Aktualny typ skanu: {scanType.replace('_', ' ').toUpperCase()}</h3>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+        <button
+          onClick={async () => {
+            try {
+              setScanStatus('starting');
+              const res = await fetch(`${httpBase}/api/scan/start`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vehicle_id: 'DEMO' }),
+              });
+              const json = await res.json();
+              setScanId(json.scan_id);
+              setScanStatus(json.status || 'scanning');
+            } catch (e) {
+              // eslint-disable-next-line no-console
+              console.error('Start scan failed', e);
+              setScanStatus('error');
+            }
+          }}
+        >
+          Start scan
+        </button>
+
+        <button
+          onClick={async () => {
+            if (!scanId) return;
+            try {
+              const res = await fetch(`${httpBase}/api/scan/stop/${scanId}`, { method: 'POST' });
+              const json = await res.json();
+              setScanStatus(json.status || 'stopped');
+            } catch (e) {
+              // eslint-disable-next-line no-console
+              console.error('Stop scan failed', e);
+              setScanStatus('error');
+            }
+          }}
+          disabled={!scanId}
+        >
+          Stop scan
+        </button>
+
+        <span style={{ fontFamily: 'monospace' }}>
+          status: {scanStatus} {scanId ? `| id: ${scanId}` : ''}
+        </span>
+        <span style={{ marginLeft: 'auto' }}>
+          typ skanu: <b>{scanType.replace('_', ' ').toUpperCase()}</b>
+        </span>
+      </div>
+
       <div ref={mountRef} style={{ width: '100%', height: '80vh' }} />
     </div>
   );

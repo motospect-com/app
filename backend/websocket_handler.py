@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from data_generator import generate_scan_data
 
@@ -17,6 +18,9 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = generate_scan_data()
+            # Lightweight multiplexing: add channel + timestamp
+            data["channel"] = data.get("scan_type")
+            data["ts"] = time.time()
             await websocket.send_text(json.dumps(data))
             await asyncio.sleep(1)  # Symulacja ciągłego skanowania
     except WebSocketDisconnect:
