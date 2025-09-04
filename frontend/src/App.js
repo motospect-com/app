@@ -2,6 +2,8 @@ import React from 'react';
 import VehicleVisualization from './VehicleVisualization';
 import './App.css';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8030';
+
 function App() {
   return (
     <div className="App">
