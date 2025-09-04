@@ -3,10 +3,11 @@
 # Exit on error
 set -e
 
-# Create and activate virtual environment
+# Create and activate virtual environment in a different directory
 echo "Setting up Python virtual environment..."
-python3 -m venv venv
-source venv/bin/activate
+rm -rf /tmp/test_venv_$(whoami)
+python3 -m venv /tmp/test_venv_$(whoami)
+source /tmp/test_venv_$(whoami)/bin/activate
 
 # Install dependencies
 echo "Installing test dependencies..."
@@ -47,6 +48,7 @@ test_result=$?
 # Clean up
 echo "Cleaning up..."
 deactivate
+rm -rf /tmp/test_venv_$(whoami)
 
 if [ $test_result -eq 0 ]; then
     echo "All tests passed successfully!"
