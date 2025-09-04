@@ -11,12 +11,15 @@ import sys
 import uvicorn
 from pathlib import Path
 
-# Add backend path for imports
+# Add backend and infrastructure paths for imports
 backend_path = Path(__file__).parent.parent.parent / "backend"
+infrastructure_path = Path(__file__).parent.parent.parent / "infrastructure"
 sys.path.append(str(backend_path))
+sys.path.append(str(infrastructure_path))
 
 from vin_decoder import VINDecoder
 from external_apis import NHTSAApi
+from config import config
 
 app = FastAPI(
     title="MOTOSPECT VIN Decoder Service",
@@ -145,11 +148,12 @@ async def service_info():
             "/api/vin/validate/{vin}",
             "/api/vin/recalls/{vin}"
         ],
-        "port": int(os.getenv("PORT", "8001"))
+        "port": int(os.getenv("PORT", config.VIN_DECODER_SERVICE_PORT))
     }
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8001"))
+    # Use port from config or environment variable
+    port = int(os.getenv("PORT", config.VIN_DECODER_SERVICE_PORT))
     print(f"🚀 Starting VIN Decoder Service on port {port}")
     
     uvicorn.run(

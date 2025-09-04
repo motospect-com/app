@@ -31,25 +31,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add backend and infrastructure paths for imports
+backend_path = Path(__file__).parent.parent.parent / "backend"
+infrastructure_path = Path(__file__).parent.parent.parent / "infrastructure"
+sys.path.append(str(backend_path))
+sys.path.append(str(infrastructure_path))
+
+from config import config
+
 # Service registry with health checking
 SERVICE_REGISTRY = {
     "vin-decoder": {
-        "url": "http://localhost:8001",
+        "url": config.VIN_DECODER_URL,
         "health_endpoint": "/health",
         "available": False
     },
     "fault-detector": {
-        "url": "http://localhost:8002", 
+        "url": config.FAULT_DETECTOR_URL, 
         "health_endpoint": "/health",
         "available": False
     },
     "diagnostic": {
-        "url": "http://localhost:8003",
+        "url": config.DIAGNOSTIC_SERVICE_URL,
         "health_endpoint": "/health", 
         "available": False
     },
     "mqtt-bridge": {
-        "url": "http://localhost:8004",
+        "url": config.MQTT_BRIDGE_URL,
         "health_endpoint": "/health",
         "available": False
     }
@@ -334,7 +342,7 @@ async def gateway_info():
             "diagnostic": ["/api/diagnostic/generate-report", "/api/diagnostic/report/{report_id}"],
             "mqtt": ["/api/mqtt/publish", "/api/mqtt/sensor-data", "/api/mqtt/vehicle-data/{vehicle_id}"]
         },
-        "port": int(os.getenv("PORT", "8000"))
+        "port": int(os.getenv("PORT", config.API_GATEWAY_PORT))
     }
 
 @app.exception_handler(HTTPException)
@@ -350,14 +358,14 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     )
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8000"))
+    port = int(os.getenv("PORT", config.API_GATEWAY_PORT))
     print(f"🚀 Starting API Gateway on port {port}")
     print("🔗 Available services:")
     for service_name, config in SERVICE_REGISTRY.items():
         print(f"   - {service_name}: {config['url']}")
     
     uvicorn.run(
-        "main:app",
+        app,
         host="0.0.0.0",
         port=port,
         reload=True,

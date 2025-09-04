@@ -12,11 +12,14 @@ import sys
 import uvicorn
 from pathlib import Path
 
-# Add backend path for imports
+# Add backend and infrastructure paths for imports
 backend_path = Path(__file__).parent.parent.parent / "backend"
+infrastructure_path = Path(__file__).parent.parent.parent / "infrastructure"
 sys.path.append(str(backend_path))
+sys.path.append(str(infrastructure_path))
 
 from fault_detector import FaultDetector
+from config import config
 
 app = FastAPI(
     title="MOTOSPECT Fault Detector Service",
@@ -198,16 +201,16 @@ async def service_info():
             "/api/fault/thresholds/{engine_size}",
             "/api/fault/health-score"
         ],
-        "port": int(os.getenv("PORT", "8002")),
+        "port": int(os.getenv("PORT", config.FAULT_DETECTOR_SERVICE_PORT)),
         "supported_engine_sizes": "1.0L - 3.0L"
     }
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8002"))
+    port = int(os.getenv("PORT", config.FAULT_DETECTOR_SERVICE_PORT))
     print(f"🚀 Starting Fault Detector Service on port {port}")
     
     uvicorn.run(
-        "main:app",
+        app,
         host="0.0.0.0",
         port=port,
         reload=True,

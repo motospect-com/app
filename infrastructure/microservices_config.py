@@ -5,86 +5,89 @@ Service definitions and startup configuration
 """
 import os
 from pathlib import Path
-from infrastructure.service_manager import ServiceConfig
+
+# Load .env file
+def load_env_config():
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    if key.strip() not in os.environ:
+                        os.environ[key.strip()] = value.strip()
+
+load_env_config()
 
 # Base paths
 BASE_PATH = Path(__file__).parent.parent
-SERVICES_PATH = BASE_PATH / "services"
+SERVICES_PATH = BASE_PATH
 
 # Microservices configurations
 MICROSERVICES_CONFIG = {
-    "vin-decoder-service": ServiceConfig(
-        name="vin-decoder-service",
-        command=["python", "main.py"],
-        working_dir=str(SERVICES_PATH / "vin-decoder-service"),
-        port=8001,
-        health_endpoint="/health",
-        environment={
-            "PORT": "8001",
-            "PYTHONPATH": str(BASE_PATH / "backend")
+    "vin-decoder-service": {
+        "name": "VIN Decoder Service",
+        "command": ["python3", "main.py"],
+        "working_dir": "services/vin-decoder-service",
+        "port": int(os.getenv("VIN_DECODER_SERVICE_PORT", "8001")),
+        "environment": {
+            "PYTHONPATH": "../../backend:$PYTHONPATH"
         },
-        dependencies=[]
-    ),
+        "dependencies": []
+    },
     
-    "fault-detector-service": ServiceConfig(
-        name="fault-detector-service", 
-        command=["python", "main.py"],
-        working_dir=str(SERVICES_PATH / "fault-detector-service"),
-        port=8002,
-        health_endpoint="/health",
-        environment={
-            "PORT": "8002",
-            "PYTHONPATH": str(BASE_PATH / "backend")
+    "fault-detector-service": {
+        "name": "Fault Detector Service",
+        "command": ["python3", "main.py"],
+        "working_dir": "services/fault-detector-service",
+        "port": int(os.getenv("FAULT_DETECTOR_SERVICE_PORT", "8002")),
+        "environment": {
+            "PYTHONPATH": "../../backend:$PYTHONPATH"
         },
-        dependencies=[]
-    ),
+        "dependencies": []
+    },
     
-    "diagnostic-service": ServiceConfig(
-        name="diagnostic-service",
-        command=["python", "main.py"],
-        working_dir=str(SERVICES_PATH / "diagnostic-service"),
-        port=8003,
-        health_endpoint="/health", 
-        environment={
-            "PORT": "8003",
-            "PYTHONPATH": str(BASE_PATH / "backend")
+    "diagnostic-service": {
+        "name": "Diagnostic Service",
+        "command": ["python3", "main.py"],
+        "working_dir": "services/diagnostic-service",
+        "port": int(os.getenv("DIAGNOSTIC_SERVICE_PORT", "8003")),
+        "environment": {
+            "PYTHONPATH": "../../backend:$PYTHONPATH"
         },
-        dependencies=["vin-decoder-service", "fault-detector-service"]
-    ),
+        "dependencies": ["vin-decoder-service", "fault-detector-service"]
+    },
     
-    "mqtt-bridge-service": ServiceConfig(
-        name="mqtt-bridge-service",
-        command=["python", "main.py"],
-        working_dir=str(SERVICES_PATH / "mqtt-bridge-service"),
-        port=8004,
-        health_endpoint="/health",
-        environment={
-            "PORT": "8004",
-            "MQTT_HOST": "localhost",
-            "MQTT_PORT": "1883",
-            "MQTT_USER": "motospect",
-            "MQTT_PASSWORD": "motospect123"
+    "mqtt-bridge-service": {
+        "name": "MQTT Bridge Service",
+        "command": ["python3", "main.py"],
+        "working_dir": "services/mqtt-bridge-service",
+        "port": int(os.getenv("MQTT_BRIDGE_SERVICE_PORT", "8004")),
+        "environment": {
+            "PYTHONPATH": "../../backend:$PYTHONPATH",
+            "MQTT_BROKER_HOST": "localhost",
+            "MQTT_BROKER_PORT": os.getenv("MQTT_PORT", "1884")
         },
-        dependencies=[]
-    ),
+        "dependencies": []
+    },
     
-    "api-gateway": ServiceConfig(
-        name="api-gateway",
-        command=["python", "main.py"],
-        working_dir=str(SERVICES_PATH / "api-gateway"),
-        port=8000,
-        health_endpoint="/health",
-        environment={
-            "PORT": "8000"
+    "api-gateway": {
+        "name": "API Gateway",
+        "command": ["python3", "main.py"],
+        "working_dir": "services/api-gateway",
+        "port": int(os.getenv("API_GATEWAY_PORT", "8000")),
+        "environment": {
+            "PYTHONPATH": "../../backend:$PYTHONPATH"
         },
-        dependencies=["vin-decoder-service", "fault-detector-service", "diagnostic-service", "mqtt-bridge-service"]
-    )
+        "dependencies": ["vin-decoder-service", "fault-detector-service", "diagnostic-service", "mqtt-bridge-service"]
+    }
 }
 
 # Startup order (respecting dependencies)
 STARTUP_ORDER = [
     "vin-decoder-service",
-    "fault-detector-service", 
+    "fault-detector-service",
     "mqtt-bridge-service",
     "diagnostic-service",
     "api-gateway"

@@ -11,13 +11,16 @@ import os
 import sys
 import uvicorn
 import requests
-from pathlib import Path
-from datetime import datetime
+from vin_decoder import VINDecoder
+from fault_detector import FaultDetector
+from config import config
 import json
 
-# Add backend path for imports
+# Add backend and infrastructure paths for imports
 backend_path = Path(__file__).parent.parent.parent / "backend"
+infrastructure_path = Path(__file__).parent.parent.parent / "infrastructure"
 sys.path.append(str(backend_path))
+sys.path.append(str(infrastructure_path))
 
 app = FastAPI(
     title="MOTOSPECT Diagnostic Service",
@@ -78,7 +81,7 @@ async def health_check():
         status="healthy",
         service="diagnostic-service",
         version="1.0.0",
-        port=int(os.getenv("PORT", "8003"))
+        port=int(os.getenv("PORT", config.DIAGNOSTIC_SERVICE_PORT))
     )
 
 @app.post("/api/diagnostic/generate-report", response_model=DiagnosticReport)
@@ -204,7 +207,7 @@ async def service_info():
             "/api/diagnostic/report/{report_id}",
             "/api/diagnostic/reports/vehicle/{vehicle_id}"
         ],
-        "port": int(os.getenv("PORT", "8003")),
+        "port": int(os.getenv("PORT", config.DIAGNOSTIC_SERVICE_PORT)),
         "dependencies": ["vin-decoder-service", "fault-detector-service"]
     }
 
@@ -286,11 +289,11 @@ def generate_report_summary(vehicle_info: Dict, health_assessment: Dict, faults:
     return summary
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8003"))
+    port = int(os.getenv("PORT", config.DIAGNOSTIC_SERVICE_PORT))
     print(f"🚀 Starting Diagnostic Service on port {port}")
     
     uvicorn.run(
-        "main:app",
+        app,
         host="0.0.0.0",
         port=port,
         reload=True,

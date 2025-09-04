@@ -16,6 +16,11 @@ check_port() {
     fi
 }
 
+# Load environment variables from .env
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
 # Function to start service
 start_service() {
     local service_name=$1
@@ -70,19 +75,19 @@ echo ""
 echo "🚀 Starting microservices..."
 
 # 1. VIN Decoder Service (no dependencies)
-start_service "VIN Decoder Service" 8001 "vin-decoder-service"
+start_service "VIN Decoder Service" "${VIN_DECODER_SERVICE_PORT:-8001}" "vin-decoder-service"
 
 # 2. Fault Detector Service (no dependencies)  
-start_service "Fault Detector Service" 8002 "fault-detector-service"
+start_service "Fault Detector Service" "${FAULT_DETECTOR_SERVICE_PORT:-8002}" "fault-detector-service"
 
 # 3. MQTT Bridge Service (no dependencies)
-start_service "MQTT Bridge Service" 8004 "mqtt-bridge-service"
+start_service "MQTT Bridge Service" "${MQTT_BRIDGE_SERVICE_PORT:-8004}" "mqtt-bridge-service"
 
 # 4. Diagnostic Service (depends on VIN + Fault services)
-start_service "Diagnostic Service" 8003 "diagnostic-service"
+start_service "Diagnostic Service" "${DIAGNOSTIC_SERVICE_PORT:-8003}" "diagnostic-service"
 
 # 5. API Gateway (depends on all services)
-start_service "API Gateway" 8000 "api-gateway"
+start_service "API Gateway" "${API_GATEWAY_PORT:-8000}" "api-gateway"
 
 echo ""
 echo "⏳ Waiting for services to fully initialize..."
@@ -92,7 +97,7 @@ echo ""
 echo "📊 Service Status Check:"
 echo "========================"
 
-services=("vin-decoder-service:8001" "fault-detector-service:8002" "diagnostic-service:8003" "mqtt-bridge-service:8004" "api-gateway:8000")
+services=("vin-decoder-service:${VIN_DECODER_SERVICE_PORT:-8001}" "fault-detector-service:${FAULT_DETECTOR_SERVICE_PORT:-8002}" "diagnostic-service:${DIAGNOSTIC_SERVICE_PORT:-8003}" "mqtt-bridge-service:${MQTT_BRIDGE_SERVICE_PORT:-8004}" "api-gateway:${API_GATEWAY_PORT:-8000}")
 
 for service_port in "${services[@]}"; do
     IFS=':' read -r service port <<< "$service_port"
@@ -107,20 +112,20 @@ done
 echo ""
 echo "🌐 Service URLs:"
 echo "================"
-echo "🔧 API Gateway:          http://localhost:8000"
-echo "📖 API Documentation:    http://localhost:8000/docs"
-echo "🏷️  VIN Decoder:          http://localhost:8001"
-echo "🔍 Fault Detector:       http://localhost:8002"
-echo "📋 Diagnostic Service:   http://localhost:8003"
-echo "📡 MQTT Bridge:          http://localhost:8004"
+echo "🔧 API Gateway:          http://localhost:${API_GATEWAY_PORT:-8000}"
+echo "📖 API Documentation:    http://localhost:${API_GATEWAY_PORT:-8000}/docs"
+echo "🏷️  VIN Decoder:          http://localhost:${VIN_DECODER_SERVICE_PORT:-8001}"
+echo "🔍 Fault Detector:       http://localhost:${FAULT_DETECTOR_SERVICE_PORT:-8002}"
+echo "📋 Diagnostic Service:   http://localhost:${DIAGNOSTIC_SERVICE_PORT:-8003}"
+echo "📡 MQTT Bridge:          http://localhost:${MQTT_BRIDGE_SERVICE_PORT:-8004}"
 
 echo ""
 echo "🎯 Quick Test Commands:"
 echo "======================="
-echo "curl http://localhost:8000/health                    # API Gateway health"
-echo "curl http://localhost:8000/api/vin/decode/1HGBH41JXMN109186  # VIN decode"
-echo "curl http://localhost:8001/api/vin/info             # VIN service info"
-echo "curl http://localhost:8002/api/fault/info           # Fault service info"
+echo "curl http://localhost:${API_GATEWAY_PORT:-8000}/health                    # API Gateway health"
+echo "curl http://localhost:${API_GATEWAY_PORT:-8000}/api/vin/decode/1HGBH41JXMN109186  # VIN decode"
+echo "curl http://localhost:${VIN_DECODER_SERVICE_PORT:-8001}/api/vin/info             # VIN service info"
+echo "curl http://localhost:${FAULT_DETECTOR_SERVICE_PORT:-8002}/api/fault/info           # Fault service info"
 
 echo ""
 echo "📄 View logs:"
