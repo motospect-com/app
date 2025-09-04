@@ -3,6 +3,16 @@
 # Exit on error
 set -e
 
+# Create and activate virtual environment
+echo "Setting up Python virtual environment..."
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+echo "Installing test dependencies..."
+pip install --upgrade pip
+pip install -r requirements-automation.txt
+
 echo "Starting Docker Compose services..."
 docker compose up -d --build
 
@@ -28,15 +38,17 @@ done
 
 echo "All services are up and running!"
 
-# Install test dependencies
-echo "Installing test dependencies..."
-pip install -r requirements-automation.txt
-
 # Run the tests
 echo "Running automated tests..."
 python automate_customer_portal.py
 
-if [ $? -eq 0 ]; then
+test_result=$?
+
+# Clean up
+echo "Cleaning up..."
+deactivate
+
+if [ $test_result -eq 0 ]; then
     echo "All tests passed successfully!"
     exit 0
 else

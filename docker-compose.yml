@@ -49,7 +49,7 @@ services:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
     environment:
       - PORT=${FRONTEND_PORT}
-      - REACT_APP_MQTT_URL=ws://motospect-mosquitto:${MQTT_WS_PORT}
+      - REACT_APP_MQTT_URL=ws://localhost:${MQTT_WS_PORT}
       - REACT_APP_MQTT_BASE_TOPIC=${MQTT_BASE_TOPIC}
       - REACT_APP_MQTT_USERNAME=${MQTT_USER:-motospect}
       - REACT_APP_MQTT_PASSWORD=${MQTT_PASSWORD:-motospect123}
@@ -76,8 +76,8 @@ services:
     environment:
       - PORT=${CUSTOMER_PORTAL_PORT}
       - REACT_APP_BACKEND_URL=http://localhost:${BACKEND_PORT}
-      - REACT_APP_REPORT_URL=http://motospect-report-service:${REPORT_SERVICE_PORT}
-      - REACT_APP_MQTT_URL=ws://motospect-mosquitto:${MQTT_WS_PORT}
+      - REACT_APP_REPORT_URL=http://localhost:${REPORT_SERVICE_PORT}
+      - REACT_APP_MQTT_URL=ws://localhost:${MQTT_WS_PORT}
       - REACT_APP_MQTT_BASE_TOPIC=${MQTT_BASE_TOPIC}
       - REACT_APP_MQTT_USERNAME=${MQTT_USER:-motospect}
       - REACT_APP_MQTT_PASSWORD=${MQTT_PASSWORD:-motospect123}
