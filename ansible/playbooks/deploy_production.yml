@@ -1,0 +1,117 @@
+---
+# Ansible playbook for MOTOSPECT production deployment
+- name: Deploy MOTOSPECT to Production
+  hosts: production
+  become: yes
+  vars:
+    project_name: motospect
+    deploy_dir: /opt/motospect
+    docker_compose_version: "2.20.0"
+    
+  tasks:
+    - name: Install system dependencies
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+          - python3-pip
+          - git
+        state: present
+        update_cache: yes
+        
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+        
+    - name: Create deployment directory
+      file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        mode: '0755'
+        
+    - name: Copy application files
+      synchronize:
+        src: "{{ playbook_dir }}/../../"
+        dest: "{{ deploy_dir }}"
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=node_modules"
+          - "--exclude=__pycache__"
+          - "--exclude=*.pyc"
+          - "--exclude=logs/*"
+          
+    - name: Copy production environment file
+      template:
+        src: templates/env.production.j2
+        dest: "{{ deploy_dir }}/.env"
+        mode: '0600'
+        
+    - name: Build Docker images
+      docker_compose:
+        project_src: "{{ deploy_dir }}"
+        build: yes
+        state: absent  # Stop first if running
+        
+    - name: Start services
+      docker_compose:
+        project_src: "{{ deploy_dir }}"
+        state: present
+        restarted: yes
+        
+    - name: Wait for backend health check
+      uri:
+        url: "http://localhost:8030/health"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 5
+      
+    - name: Run database migrations (if any)
+      docker_compose:
+        project_src: "{{ deploy_dir }}"
+        services:
+          - backend
+        command: python manage.py migrate
+      ignore_errors: yes
+      
+    - name: Setup log rotation
+      template:
+        src: templates/logrotate.j2
+        dest: /etc/logrotate.d/motospect
+        
+    - name: Setup systemd service
+      template:
+        src: templates/motospect.service.j2
+        dest: /etc/systemd/system/motospect.service
+        
+    - name: Enable and start MOTOSPECT service
+      systemd:
+        name: motospect
+        state: started
+        enabled: yes
+        daemon_reload: yes
+        
+    - name: Setup firewall rules
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - 80    # HTTP
+        - 443   # HTTPS
+        - 8030  # Backend API
+        - 3030  # Frontend
+        - 3040  # Customer Portal
+        - 1884  # MQTT
+        - 9002  # MQTT WebSocket
+        
+    - name: Display deployment status
+      debug:
+        msg:
+          - "MOTOSPECT deployed successfully!"
+          - "Backend: http://{{ ansible_host }}:8030"
+          - "Frontend: http://{{ ansible_host }}:3030"
+          - "Customer Portal: http://{{ ansible_host }}:3040"

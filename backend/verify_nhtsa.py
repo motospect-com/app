@@ -3,12 +3,18 @@
 
 import sys
 import os
+from dotenv import load_dotenv
 
-# Add backend to path
-sys.path.insert(0, '/home/tom/github/motospect-com/app/backend')
+# Load environment variables
+load_dotenv()
 
-# Create output file
-output_file = '/tmp/nhtsa_verification.txt'
+# Add backend to path from environment variable
+backend_path = os.getenv('BACKEND_PATH', '/home/tom/github/motospect-com/app/backend')
+sys.path.insert(0, backend_path)
+
+# Create output file in configured path
+test_output_path = os.getenv('TEST_OUTPUT_PATH', '/tmp')
+output_file = os.path.join(test_output_path, 'nhtsa_verification.txt')
 
 with open(output_file, 'w') as f:
     f.write("NHTSA VIN Decoder Integration Verification\n")

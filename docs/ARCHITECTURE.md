@@ -1,8 +1,18 @@
-# MotoSpect Automotive Diagnostic System Architecture
+# MOTOSPECT System Architecture
 
-## System Overview
+## Overview
 
-MotoSpect is a comprehensive automotive diagnostic platform that combines hardware scanning capabilities with OBD interface integration, AI-powered fault detection, and automated reporting.
+MOTOSPECT is a comprehensive vehicle diagnostic system that combines hardware sensors with intelligent software analysis to provide detailed vehicle health reports.
+
+## Version 2.0 Updates
+
+### Key Improvements
+- **Environment Configuration**: All configuration moved to `.env` file
+- **NHTSA Integration**: Full VIN decoder API with fallback mode
+- **CORS Support**: Complete cross-origin resource sharing
+- **Testing Suite**: Playwright GUI tests, integration tests, E2E scenarios
+- **Ansible Automation**: Deployment and testing playbooks
+- **Enhanced Logging**: Debug mode with comprehensive logging
 
 ## Architecture Diagram
 

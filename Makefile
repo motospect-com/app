@@ -1,7 +1,7 @@
 # MotoSpect Project Makefile
 # Vehicle diagnostic system for cars, vans, SUVs up to 3L engine capacity
 
-.PHONY: help build up down restart logs test test-e2e test-backend test-mqtt clean install dev prod
+.PHONY: help build up down restart logs test test-e2e test-backend test-mqtt test-system test-api test-complete test-ansible clean install dev prod status
 
 # Default target - show help
 help:
@@ -15,6 +15,11 @@ help:
 	@echo "  make test       - Run all tests"
 	@echo "  make test-e2e   - Run E2E tests"
 	@echo "  make test-mqtt  - Test MQTT sensor simulation"
+	@echo "  make test-system - Run system integration tests"
+	@echo "  make test-api   - Test API and CORS"
+	@echo "  make test-complete - Run complete system test"
+	@echo "  make test-ansible - Run Ansible test playbook"
+	@echo "  make status     - Show service status"
 	@echo "  make dev        - Start in development mode"
 	@echo "  make prod       - Start in production mode"
 	@echo "  make clean      - Clean up artifacts"
@@ -32,7 +37,11 @@ build:
 # Start services in detached mode
 up:
 	docker-compose up -d
-	@echo "Services started. Backend: http://localhost:8000"
+	@echo "Services started:"
+	@echo "  Backend API: http://localhost:8030"
+	@echo "  Frontend: http://localhost:3030"
+	@echo "  Customer Portal: http://localhost:3040"
+	@echo "  API Docs: http://localhost:8030/docs"
 
 # Stop and remove containers
 down:
@@ -54,7 +63,7 @@ prod:
 	docker-compose -f docker-compose.yml up -d
 
 # Run all tests
-test: test-backend test-e2e
+test: test-backend test-api test-system test-e2e
 
 # Run E2E tests
 test-e2e:
@@ -74,6 +83,34 @@ test-mqtt:
 # Quick system test
 test-quick:
 	cd tests && python3 quick_test.py
+
+# Test system integration
+test-system:
+	@echo "Running system integration tests..."
+	python3 test_system.py
+
+# Test API and CORS
+test-api:
+	@echo "Testing API endpoints and CORS..."
+	python3 test_api_cors.py
+
+# Run complete system test
+test-complete:
+	@echo "Running complete system test..."
+	python3 test_complete_system.py
+
+# Run Ansible test playbook
+test-ansible:
+	@echo "Running Ansible test playbook..."
+	ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/test_system.yml
+
+# Show service status
+status:
+	@echo "Service Status:"
+	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+	@echo ""
+	@echo "Testing backend health..."
+	@curl -s http://localhost:8030/health | python3 -m json.tool || echo "Backend not responding"
 
 # Clean up project artifacts
 clean:

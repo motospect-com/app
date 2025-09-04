@@ -109,76 +109,215 @@ const VehicleVisualization = () => {
 
   // Data ingress via MQTT (preferred when enabled)
   useEffect(() => {
-    if (!useMqtt) return;
-
-    let client;
-    try {
-      // Use MQTT URL from config
-      const clientId = `ui-${Math.floor(Math.random() * 1e6)}`;
+    let client = null;
+    let isMounted = true;
+    let reconnectTimeout = null;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    const RECONNECT_DELAY = 5000; // 5 seconds
+    
+    const connectMqtt = () => {
+      if (!isMounted) return;
       
-      // Parse the WebSocket URL
-      const mqttUrl = new URL(config.mqtt.url);
-      const host = mqttUrl.hostname;
-      const port = mqttUrl.port || (mqttUrl.protocol === 'wss:' ? 443 : 80);
-      const path = mqttUrl.pathname || '/mqtt';
+      // Clear any existing connection
+      if (client) {
+        try {
+          if (client.isConnected()) {
+            console.log('[MQTT] Disconnecting existing client...');
+            client.disconnect();
+          }
+        } catch (e) {
+          console.warn('[MQTT] Error disconnecting existing client:', e);
+        }
+      }
       
-      console.log(`[MQTT] Connecting to ${host}:${port}${path} with client ID ${clientId}`);
-      
-      // Initialize MQTT client with proper WebSocket options
-      client = new MqttClient(host, Number(port), path, clientId);
-      
-      // Set username and password if provided
-      if (config.mqtt.username) {
+      try {
+        console.log('[MQTT] Connecting to', config.mqtt.url);
+        
+        // Parse the WebSocket URL to extract host, port, and path
+        const mqttUrl = new URL(config.mqtt.url);
+        const host = mqttUrl.hostname;
+        const port = mqttUrl.port || (mqttUrl.protocol === 'wss:' ? 443 : 80);
+        const path = mqttUrl.pathname || '/mqtt';
+        
+        // Use the client ID from config or generate a new one
+        const clientId = config.mqtt.clientId || `motospect-ui-${Math.random().toString(16).substr(2, 8)}`;
+        
+        console.log(`[MQTT] Creating client with ID: ${clientId}`);
+        
+        // Create MQTT client with explicit WebSocket options
+        client = new MqttClient(host, Number(port), path, clientId);
+        
+        // Configure WebSocket options
+        const wsOptions = {
+          protocol: 'mqtt',
+          rejectUnauthorized: false // Only for development with self-signed certificates
+        };
+        
+        // Set WebSocket options if using WebSocket transport
+        if (path && (path.includes('ws') || path.includes('wss'))) {
+          client.connectOptions = {
+            ...client.connectOptions,
+            useSSL: mqttUrl.protocol === 'wss:',
+            protocol: mqttUrl.protocol.replace(':', ''),
+            wsOptions: wsOptions
+          };
+        }
+        
+        // Set callback handlers
+        client.onConnectionLost = (responseObject) => {
+          if (responseObject.errorCode !== 0) {
+            console.error('[MQTT] Connection lost:', responseObject.errorMessage);
+          }
+          // Only attempt to reconnect if component is still mounted and we haven't exceeded max attempts
+          if (isMounted && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            const delay = Math.min(RECONNECT_DELAY * reconnectAttempts, 30000); // Max 30s delay
+            console.log(`[MQTT] Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms...`);
+            reconnectTimeout = setTimeout(connectMqtt, delay);
+          } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            console.error('[MQTT] Max reconnection attempts reached. Please refresh the page to try again.');
+            // Reset reconnect attempts after a longer delay
+            setTimeout(() => {
+              reconnectAttempts = 0;
+            }, 60000); // Reset after 1 minute
+          }
+        };
+        
+        // Handle connection success
+        const onConnect = () => {
+          if (!isMounted) {
+            if (client && client.isConnected()) client.disconnect();
+            return;
+          }
+          console.log('[MQTT] Connected successfully to', config.mqtt.url);
+          reconnectAttempts = 0; // Reset reconnect counter on successful connection
+          
+          // Subscribe to topics after successful connection
+          try {
+            const topic = `${config.mqtt.baseTopic}/#`;
+            client.subscribe(topic, { qos: 0 });
+            console.log(`[MQTT] Subscribed to topic: ${topic}`);
+          } catch (error) {
+            console.error('[MQTT] Error subscribing to topics:', error);
+          }
+        };
+        
+        // Handle connection failure
+        const onFailure = (error) => {
+          console.error('[MQTT] Connection failed:', error.errorMessage);
+          // Only attempt to reconnect if component is still mounted
+          if (isMounted) {
+            reconnectTimeout = setTimeout(connectMqtt, 5000);
+          }
+        };
+        
+        // Set up connection options
+        const connectOptions = {
+          onSuccess: onConnect,
+          onFailure: onFailure,
+          userName: config.mqtt.username,
+          password: config.mqtt.password,
+          useSSL: mqttUrl.protocol === 'wss:',
+          reconnect: false, // We handle reconnection manually
+          keepAliveInterval: 30,
+          cleanSession: true,
+          mqttVersion: 4, // Use MQTT 3.1.1
+          protocol: mqttUrl.protocol.replace(':', ''),
+          wsOptions: {
+            protocol: 'mqtt',
+            rejectUnauthorized: false // Only for development
+          }
+        };
+        
+        // Connect to the broker
+        console.log('[MQTT] Connecting with options:', {
+          ...connectOptions,
+          password: '***' // Don't log the actual password
+        });
+        
+        try {
+          client.connect(connectOptions);
+        } catch (error) {
+          console.error('[MQTT] Error during connect:', error);
+          if (isMounted) {
+            reconnectTimeout = setTimeout(connectMqtt, 5000);
+          }
+        }
+        
+        client.onMessageArrived = (message) => {
+          if (!isMounted) return;
+          try {
+            const data = JSON.parse(message.payloadString);
+            console.log('[MQTT] Message received on', message.destinationName, ':', data);
+            // Handle the incoming MQTT message
+            const channel = data.channel || data.scan_type || 'unknown';
+            switch (channel) {
+              case 'tof':
+                setTofData(data);
+                break;
+              case 'thermal':
+                setThermalData(data);
+                break;
+              case 'uv':
+                // UV data is no longer used, but we'll keep the case for future use
+                // setUvData(data);
+                break;
+              case 'paint_thickness':
+                setPaintData(data);
+                break;
+              case 'audio':
+                setAudioData(data);
+                break;
+              default:
+                break;
+            }
+            if (channel === selectedChannelRef.current) {
+              setScanData(data);
+              setScanType(data.scan_type || 'N/A');
+            }
+          } catch (error) {
+            console.error('[MQTT] Error parsing message:', error);
+          }
+        };
+        
+        // Connect to the MQTT broker
         client.connect({
           onSuccess: () => {
-            console.log('[MQTT] Connected successfully');
+            if (!isMounted) {
+              if (client && client.isConnected()) client.disconnect();
+              return;
+            }
+            console.log('[MQTT] Connected successfully to', config.mqtt.url);
+            // Subscribe to topics after successful connection
+            try {
+              client.subscribe(`${mqttBaseTopic}/+`, { qos: 0 });
+              console.log(`[MQTT] Subscribed to ${mqttBaseTopic}/+`);
+            } catch (error) {
+              console.error('[MQTT] Error subscribing to topics:', error);
+            }
           },
-          onFailure: (err) => {
-            console.error('[MQTT] Connection failed', err);
+          onFailure: (error) => {
+            console.error('[MQTT] Connection failed:', error.errorMessage);
+            // Only attempt to reconnect if component is still mounted
+            if (isMounted) {
+              reconnectTimeout = setTimeout(connectMqtt, 5000);
+            }
           },
           userName: config.mqtt.username,
           password: config.mqtt.password,
-          useSSL: config.mqtt.url.startsWith('wss')
+          useSSL: mqttUrl.protocol === 'wss:',
+          reconnect: false, // We handle reconnection manually
+          keepAliveInterval: 30,
+          cleanSession: true,
+          mqttVersion: 4, // Use MQTT 3.1.1
         });
-      } else {
-        client.connect({
-          onSuccess: () => {
-            console.log('[MQTT] Connected successfully');
-          },
-          onFailure: (err) => {
-            console.error('[MQTT] Connection failed', err);
-          }
-        });
-      }
-    } catch (e) {
-      console.error('[MQTT] Client init failed', e);
-      return undefined;
-    }
-
-    client.onConnectionLost = (resp) => {
-      if (resp.errorCode !== 0) {
-        // eslint-disable-next-line no-console
-        console.warn('[MQTT] connection lost', resp.errorMessage);
-      }
-    };
-
-    client.onMessageArrived = (message) => {
-      try {
-        const data = JSON.parse(message.payloadString);
-        const channel = data.channel || data.scan_type || 'unknown';
-        switch (channel) {
-          case 'tof':
-            setTofData(data);
-            break;
-          case 'thermal':
-            setThermalData(data);
-            break;
-          case 'uv':
-            // UV data is no longer used, but we'll keep the case for future use
-            // setUvData(data);
-            break;
-          case 'paint_thickness':
-            setPaintData(data);
+        
+      } catch (error) {
+        console.error('[MQTT] Error in MQTT setup:', error);
+        // Only attempt to reconnect if component is still mounted
+        if (isMounted) {
+          reconnectTimeout = setTimeout(connectMqtt, 5000);
             break;
           case 'audio':
             setAudioData(data);

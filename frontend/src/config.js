@@ -8,11 +8,22 @@ const config = {
   // MQTT Configuration
   mqtt: {
     // Use the correct WebSocket port (9001) as defined in mosquitto.conf
-    url: process.env.REACT_APP_MQTT_URL || 'ws://motospect-mosquitto:9001',
+    // For local development, use localhost:9001
+    // In Docker, use motospect-mosquitto:9001
+    url: process.env.REACT_APP_MQTT_URL || 'ws://localhost:9001',
     baseTopic: process.env.REACT_APP_MQTT_BASE_TOPIC || 'motospect/v1',
     username: process.env.REACT_APP_MQTT_USERNAME || 'motospect',
-    password: process.env.REACT_APP_MQTT_PASSWORD || 'motospect123'
+    password: process.env.REACT_APP_MQTT_PASSWORD || 'motospect123',
+    clientId: `motospect-frontend-${Math.random().toString(16).substr(2, 8)}`
   }
 };
+
+// Log the MQTT configuration for debugging
+console.log('MQTT Configuration:', {
+  url: config.mqtt.url,
+  baseTopic: config.mqtt.baseTopic,
+  username: config.mqtt.username,
+  clientId: config.mqtt.clientId
+});
 
 export default config;

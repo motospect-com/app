@@ -412,6 +412,80 @@ async def get_common_problems(make: str, model: str, year: int):
         return {"status": "error", "message": str(e)}
 
 
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {"message": "MOTOSPECT Backend API", "version": "2.0.0"}
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "services": {
+            "vin_decoder": "active",
+            "obd_interface": "active",
+            "fault_detector": "active",
+            "mqtt_bridge": "active" if mqtt_enabled else "disabled"
+        }
+    }
+
+
+@app.get("/api/vin/decode/{vin}")
+async def decode_vin(vin: str):
+    """Decode a VIN and return vehicle information"""
+    try:
+        with log_timing(f"VIN decode for {vin}"):
+            if not vin_decoder.validate(vin):
+                raise HTTPException(status_code=400, detail="Invalid VIN format")
+            
+            result = vin_decoder.decode(vin)
+            if not result:
+                raise HTTPException(status_code=404, detail="Unable to decode VIN")
+            
+            return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error decoding VIN {vin}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/vin/validate/{vin}")
+async def validate_vin(vin: str):
+    """Validate a VIN format"""
+    try:
+        is_valid = vin_decoder.validate(vin)
+        return {
+            "vin": vin,
+            "valid": is_valid,
+            "message": "Valid VIN format" if is_valid else "Invalid VIN format"
+        }
+    except Exception as e:
+        logger.error(f"Error validating VIN {vin}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/vin/recalls/{vin}")
+async def get_vin_recalls(vin: str):
+    """Get recall information for a VIN"""
+    try:
+        if not vin_decoder.validate(vin):
+            raise HTTPException(status_code=400, detail="Invalid VIN format")
+        
+        recalls = vin_decoder.get_recall_info(vin)
+        return {
+            "vin": vin,
+            "recalls": recalls,
+            "recall_count": len(recalls) if recalls else 0
+        }
+    except Exception as e:
+        logger.error(f"Error fetching recalls for VIN {vin}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/upload/{device_type}")
 def upload_data(device_type: str, data=None):
     _ = scan_mgr.start(vehicle_id=None)  # Start scan but don't use ID

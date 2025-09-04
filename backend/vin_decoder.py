@@ -2,6 +2,7 @@
 VIN Decoder Service with Public API Integration
 Supports NHTSA and fallback local decoding
 """
+import os
 import re
 import random
 import asyncio
@@ -41,9 +42,11 @@ class VehicleData:
 
 
 class VINDecoder:
-    """VIN (Vehicle Identification Number) decoder service with NHTSA API integration"""
-
-    def __init__(self, use_nhtsa_api: bool = True):
+    """VIN decoder with NHTSA API integration and fallback to local decoding"""
+    def __init__(self, use_nhtsa_api: bool = None):
+        if use_nhtsa_api is None:
+            # Read from environment variable
+            use_nhtsa_api = os.getenv('NHTSA_API_ENABLED', 'true').lower() == 'true'
         self.valid_pattern = re.compile(r'^[A-HJ-NPR-Z0-9]{17}$')
         self.use_nhtsa_api = use_nhtsa_api
         self.nhtsa_api = NHTSAApi() if use_nhtsa_api else None

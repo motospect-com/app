@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-MotoSpect System Test
-Tests core functionality without external dependencies
+Comprehensive System Test for MOTOSPECTests core functionality without external dependencies
 """
 
 import sys

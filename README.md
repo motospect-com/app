@@ -1,5 +1,141 @@
-# app
+# MOTOSPECT - Advanced Vehicle Diagnostic System
 
+**Version 2.0.0** - Complete Backend Integration & Testing Suite
+
+## 🚀 Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/motospect/app.git
+cd app
+
+# Copy environment configuration
+cp .env.example .env
+# Edit .env with your configuration
+
+# Start all services with Docker
+docker-compose up -d
+
+# Access the applications
+# Frontend: http://localhost:3030
+# Customer Portal: http://localhost:3040
+# Backend API: http://localhost:8030
+# API Documentation: http://localhost:8030/docs
+```
+
+## 📋 Features
+
+### Core Functionality
+- **VIN Decoder**: Real-time vehicle identification with NHTSA API integration
+- **OBD-II Diagnostics**: Read fault codes, sensor data, and vehicle parameters
+- **Thermal Imaging**: Detect overheating components and coolant leaks
+- **Visual Inspection**: AI-powered damage detection and paint thickness analysis
+- **Report Generation**: Comprehensive PDF reports with all diagnostic data
+
+### Recent Updates (v2.0)
+- ✅ Environment variable configuration (.env file)
+- ✅ Full NHTSA VIN decoder API integration with fallback mode
+- ✅ CORS support for cross-origin requests
+- ✅ WebSocket support for real-time updates
+- ✅ Ansible playbooks for automated deployment
+- ✅ Playwright GUI testing suite
+- ✅ Comprehensive logging and debug mode
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│             Frontend (React)                 │
+│            Port: 3030                        │
+└─────────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────────┐
+│           Backend API (FastAPI)              │
+│            Port: 8030                        │
+│  - VIN Decoder    - Report Generator         │
+│  - OBD Interface  - WebSocket Server         │
+│  - Fault Detector - MQTT Bridge              │
+└─────────────────────────────────────────────┘
+                    │
+        ┌───────────┼───────────┐
+        ▼           ▼           ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐
+│  MQTT    │ │  NHTSA   │ │ Hardware │
+│  Broker  │ │   API    │ │ Sensors  │
+│Port: 1884│ │          │ │          │
+└──────────┘ └──────────┘ └──────────┘
+```
+
+## 🔧 API Endpoints
+
+### VIN Operations
+- `GET /api/vin/validate/{vin}` - Validate VIN format
+- `GET /api/vin/decode/{vin}` - Decode VIN to vehicle info
+- `GET /api/vin/recalls/{vin}` - Get recall information
+
+### Diagnostic Operations
+- `POST /api/scan/start` - Start diagnostic scan
+- `GET /api/scan/{scan_id}/status` - Get scan status
+- `POST /api/scan/{scan_id}/stop` - Stop active scan
+- `GET /api/scan/{scan_id}/results` - Get scan results
+
+### Report Operations
+- `POST /api/report/generate` - Generate diagnostic report
+- `GET /api/report/{report_id}` - Download report PDF
+
+## 🧪 Testing
+
+```bash
+# Run unit tests
+python -m pytest tests/
+
+# Run integration tests
+./run_tests.sh
+
+# Run E2E tests with Playwright
+python tests/gui_test_playwright.py
+
+# Run Ansible test playbook
+ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/test_system.yml
+```
+
+## 📦 Deployment
+
+### Using Docker Compose (Recommended)
+```bash
+docker-compose up -d
+```
+
+### Using Ansible
+```bash
+ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/deploy_production.yml
+```
+
+## 📝 Environment Variables
+
+Key environment variables in `.env`:
+
+```bash
+# API Configuration
+NHTSA_API_ENABLED=true
+BACKEND_PORT=8030
+FRONTEND_PORT=3030
+
+# Debug Settings
+DEBUG_MODE=true
+LOG_LEVEL=INFO
+
+# External APIs
+WEATHER_API_KEY=your_api_key_here
+```
+
+## 📚 Documentation
+
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Deployment Guide](DEPLOYMENT.md)
+- [API Documentation](http://localhost:8030/docs)
+- [Test Scenarios](tests/TEST_SCENARIO_DOCUMENTATION.md)
 
 ## System MOTOSPECT v1.0 - Konfiguracja mobilna $2400
 

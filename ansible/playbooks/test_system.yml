@@ -1,0 +1,88 @@
+---
+# Ansible playbook for MOTOSPECT system testing
+- name: Test MOTOSPECT System
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    project_dir: "{{ ansible_env.PWD | default('/home/tom/github/motospect-com/app') }}"
+    backend_port: 8030
+    frontend_port: 3030
+    test_vin: "1HGBH41JXMN109186"
+    
+  tasks:
+    - name: Check Docker is running
+      command: docker version
+      register: docker_check
+      failed_when: docker_check.rc != 0
+      
+    - name: Build Docker images
+      docker_compose:
+        project_src: "{{ project_dir }}"
+        build: yes
+        services:
+          - backend
+          - frontend
+          - customer-portal
+      
+    - name: Start services
+      docker_compose:
+        project_src: "{{ project_dir }}"
+        state: present
+        services:
+          - backend
+          - frontend
+          - customer-portal
+          - mosquitto
+      
+    - name: Wait for backend to be ready
+      uri:
+        url: "http://localhost:{{ backend_port }}/health"
+        status_code: 200
+      register: backend_health
+      until: backend_health.status == 200
+      retries: 10
+      delay: 3
+      
+    - name: Test VIN validation endpoint
+      uri:
+        url: "http://localhost:{{ backend_port }}/api/vin/validate/{{ test_vin }}"
+        method: GET
+        status_code: 200
+      register: vin_validate
+      
+    - name: Test VIN decode endpoint
+      uri:
+        url: "http://localhost:{{ backend_port }}/api/vin/decode/{{ test_vin }}"
+        method: GET
+        status_code: 200
+      register: vin_decode
+      
+    - name: Test CORS headers
+      uri:
+        url: "http://localhost:{{ backend_port }}/api/vin/validate/{{ test_vin }}"
+        method: GET
+        headers:
+          Origin: "http://localhost:{{ frontend_port }}"
+        status_code: 200
+      register: cors_test
+      failed_when: "'access-control-allow-origin' not in cors_test"
+      
+    - name: Test scan start endpoint
+      uri:
+        url: "http://localhost:{{ backend_port }}/api/scan/start"
+        method: POST
+        body_format: json
+        body:
+          vin: "{{ test_vin }}"
+          scan_type: "full"
+        status_code: 200
+      register: scan_start
+      
+    - name: Display test results
+      debug:
+        msg:
+          - "Backend Health: {{ backend_health.status }}"
+          - "VIN Valid: {{ vin_validate.json.valid }}"
+          - "VIN Make: {{ vin_decode.json.make | default('N/A') }}"
+          - "CORS Enabled: {{ 'access-control-allow-origin' in cors_test }}"
+          - "Scan Started: {{ scan_start.json.scan_id is defined }}"

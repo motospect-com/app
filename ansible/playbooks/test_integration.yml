@@ -1,0 +1,134 @@
+---
+# Ansible playbook for MOTOSPECT integration testing
+- name: Run MOTOSPECT Integration Tests
+  hosts: localhost
+  gather_facts: no
+  vars:
+    backend_url: "http://localhost:8030"
+    frontend_url: "http://localhost:3030"
+    test_vins:
+      - "1HGBH41JXMN109186"  # Honda Accord
+      - "5UXWX7C5XEY000000"  # BMW X3
+      - "WAUAFAFL1DN000000"  # Audi A4
+    
+  tasks:
+    - name: Test VIN Decoder API
+      block:
+        - name: Validate VINs
+          uri:
+            url: "{{ backend_url }}/api/vin/validate/{{ item }}"
+            method: GET
+            status_code: 200
+          loop: "{{ test_vins }}"
+          register: vin_validations
+          
+        - name: Decode VINs
+          uri:
+            url: "{{ backend_url }}/api/vin/decode/{{ item }}"
+            method: GET
+            status_code: 200
+          loop: "{{ test_vins }}"
+          register: vin_decodes
+          
+        - name: Check recall information
+          uri:
+            url: "{{ backend_url }}/api/vin/recalls/{{ item }}"
+            method: GET
+            status_code: 200
+          loop: "{{ test_vins }}"
+          register: vin_recalls
+          
+    - name: Test Diagnostic Scan API
+      block:
+        - name: Start diagnostic scan
+          uri:
+            url: "{{ backend_url }}/api/scan/start"
+            method: POST
+            body_format: json
+            body:
+              vin: "{{ test_vins[0] }}"
+              scan_type: "full"
+              options:
+                include_obd: true
+                include_thermal: true
+                include_visual: true
+            status_code: 200
+          register: scan_result
+          
+        - name: Generate diagnostic report
+          uri:
+            url: "{{ backend_url }}/api/report/generate"
+            method: POST
+            body_format: json
+            body:
+              vin: "{{ test_vins[0] }}"
+              scan_data: {}
+            status_code: 200
+          register: report_result
+          
+        - name: Retrieve report
+          uri:
+            url: "{{ backend_url }}/api/report/{{ report_result.json.report_id }}"
+            method: GET
+            status_code: 200
+          when: report_result.json.report_id is defined
+          
+    - name: Test WebSocket Connection
+      block:
+        - name: Check WebSocket endpoint availability
+          uri:
+            url: "{{ backend_url }}/ws"
+            method: GET
+            status_code: 
+              - 101  # Switching Protocols
+              - 426  # Upgrade Required
+          ignore_errors: yes
+          register: ws_check
+          
+    - name: Test CORS Configuration
+      uri:
+        url: "{{ backend_url }}/api/vin/validate/{{ test_vins[0] }}"
+        method: OPTIONS
+        headers:
+          Origin: "{{ frontend_url }}"
+          Access-Control-Request-Method: "GET"
+          Access-Control-Request-Headers: "Content-Type"
+        status_code: 
+          - 200
+          - 204
+      register: cors_preflight
+      
+    - name: Performance Tests
+      block:
+        - name: Measure API response times
+          uri:
+            url: "{{ backend_url }}/api/vin/decode/{{ test_vins[0] }}"
+            method: GET
+            timeout: 5
+          register: perf_test
+          loop: "{{ range(1, 6) | list }}"
+          loop_control:
+            label: "Request {{ item }}"
+            
+    - name: Generate test report
+      copy:
+        content: |
+          MOTOSPECT Integration Test Results
+          ===================================
+          
+          VIN Decoder Tests:
+          {% for result in vin_validations.results %}
+          - VIN {{ result.item }}: {{ 'PASS' if result.status == 200 else 'FAIL' }}
+          {% endfor %}
+          
+          Diagnostic API: {{ 'PASS' if scan_result.status == 200 else 'FAIL' }}
+          Report Generation: {{ 'PASS' if report_result.status == 200 else 'FAIL' }}
+          
+          CORS Configuration: {{ 'PASS' if cors_preflight.status in [200, 204] else 'FAIL' }}
+          
+          Performance Metrics:
+          - Average response time: {{ (perf_test.results | map(attribute='elapsed') | list | sum / perf_test.results | length) | round(3) }}s
+          
+          Test completed at: {{ ansible_date_time.iso8601 }}
+        dest: /tmp/motospect_integration_test_report.txt
+      delegate_to: localhost

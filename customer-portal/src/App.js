@@ -41,7 +41,7 @@ function App() {
 
     try {
       // Validate and decode VIN
-      const response = await axios.post(`${BACKEND_URL}/api/vehicle/decode`, { vin });
+      const response = await axios.get(`${BACKEND_URL}/api/vin/decode/${vin}`);
       setVehicleData(response.data);
 
       // Start scanning simulation
