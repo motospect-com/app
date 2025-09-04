@@ -6,3 +6,4 @@ python-multipart
 websockets
 paho-mqtt
 aiohttp
+cachetools>=5.0.0
