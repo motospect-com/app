@@ -7,7 +7,7 @@ import paho.mqtt.client as mqtt
 from fastapi import APIRouter, HTTPException
 
 
-class MqttBridge:
+class MQTTBridge:
     def __init__(self) -> None:
         self.host: str = os.getenv("MQTT_BROKER_HOST", "localhost")
         self.port: int = int(os.getenv("MQTT_BROKER_PORT", "1883"))
@@ -33,6 +33,10 @@ class MqttBridge:
         except Exception as e:
             print(f"[mqtt_bridge] bad payload on {msg.topic}: {e}")
 
+    def connect(self) -> None:
+        """Connect to MQTT broker (alias for start)"""
+        self.start()
+    
     def start(self) -> None:
         if self._client is not None:
             return
@@ -71,7 +75,7 @@ def is_enabled() -> bool:
     return os.getenv("ENABLE_MQTT_BRIDGE", "true").lower() == "true"
 
 
-bridge = MqttBridge()
+bridge = MQTTBridge()
 
 router = APIRouter()
 

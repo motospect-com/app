@@ -455,4 +455,9 @@ async def test_vehicle_database():
 
 
 if __name__ == "__main__":
-    asyncio.run(test_vehicle_database())
+    try:
+        asyncio.run(test_vehicle_database())
+    except Exception as e:
+        print(f"Error running test: {e}")
+        import traceback
+        traceback.print_exc()

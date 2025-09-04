@@ -321,3 +321,8 @@ def api_scan_results(scan_id: str):
     except KeyError:
         raise HTTPException(status_code=404, detail="Results not found for scan_id")
     return {"status": "stopped", "final_data": data}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
