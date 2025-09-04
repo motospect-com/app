@@ -56,6 +56,8 @@ logger.info(f"Starting MOTOSPECT Backend - Debug Mode: {DEBUG_MODE}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        # Allow all origins for development
+        "*",
         # Local development
         "http://localhost:3030",  # Frontend
         "http://localhost:3040",  # Customer Portal
@@ -71,10 +73,28 @@ app.add_middleware(
         "http://localhost:8080",  # Common dev port
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"]  # Expose all headers to the client
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "*",
+        "Content-Type",
+        "Authorization",
+        "Access-Control-Allow-Origin",
+        "Access-Control-Allow-Headers",
+        "Access-Control-Allow-Methods"
+    ],
+    expose_headers=["*"],  # Expose all headers to the client
+    max_age=600  # Cache preflight requests for 10 minutes
 )
+
+# Add CORS headers to all responses
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 # Initialize services
 logger.info("Initializing MOTOSPECT services...")
