@@ -12,6 +12,8 @@ x-common: &common-vars
 
 services:
   backend:
+    networks:
+      - motospect-network
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -28,6 +30,8 @@ services:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     volumes:
       - ./backend:/app
+    networks:
+      - motospect-network
     command: uvicorn main:app --host 0.0.0.0 --port ${BACKEND_PORT} --reload
     depends_on:
       mosquitto:
@@ -40,6 +44,8 @@ services:
       start_period: 10s
 
   frontend:
+    networks:
+      - motospect-network
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -58,16 +64,20 @@ services:
       - backend
     volumes:
       - ./frontend:/app
+    networks:
+      - motospect-network
       - /app/node_modules
     command: npm start
 
   customer-portal:
+    networks:
+      - motospect-network
     build: ./customer-portal
     container_name: motospect-customer-portal
     ports:
       - "${CUSTOMER_PORTAL_PORT}:${CUSTOMER_PORTAL_PORT}"
     environment:
-      - PORT=${FRONTEND_PORT}
+      - PORT=${CUSTOMER_PORTAL_PORT}
       - REACT_APP_BACKEND_URL=http://host.docker.internal:${BACKEND_PORT}
       - REACT_APP_REPORT_URL=http://host.docker.internal:${REPORT_SERVICE_PORT}
       - REACT_APP_MQTT_URL=ws://host.docker.internal:${MQTT_WS_PORT}
@@ -75,21 +85,27 @@ services:
       - CHOKIDAR_USEPOLLING=true
     volumes:
       - ./customer-portal:/app
+    networks:
+      - motospect-network
       - /app/node_modules
     depends_on:
       - mosquitto
       - backend
 
   report-service:
+    networks:
+      - motospect-network
     build: ./report-service
     container_name: motospect-report-service
     ports:
       - "${REPORT_SERVICE_PORT}:${REPORT_SERVICE_PORT}"
     environment:
-      - PORT=${FRONTEND_PORT}
+      - PORT=${REPORT_SERVICE_PORT}
       - REACT_APP_BACKEND_URL=http://host.docker.internal:${BACKEND_PORT}
     volumes:
       - ./report-service:/app
+    networks:
+      - motospect-network
       - /app/node_modules
     command: npm start
 
