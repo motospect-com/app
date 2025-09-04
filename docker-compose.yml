@@ -1,12 +1,7 @@
 # Optimized for performance with BuildKit
 version: '3.8'
 
-# Named volumes for caching
-volumes:
-  node_modules_frontend:
-  node_modules_customer:
-  node_modules_report:
-  pip_cache:
+
 
 # Enable BuildKit for parallel builds and better caching
 x-env: &default-environment
@@ -203,3 +198,7 @@ volumes:
     name: motospect_backend_deps
   frontend-deps:
     name: motospect_frontend_deps
+  node_modules_frontend:
+  node_modules_customer:
+  node_modules_report:
+  pip_cache:

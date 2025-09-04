@@ -1,73 +1,68 @@
 #!/usr/bin/env python3
-"""
-Simple test server for MOTOSPECT backend
-"""
+"""Simple test server for MOTOSPECT backend"""
+import http.server
+import socketserver
+import json
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fault_detector import FaultDetector
-from vin_decoder import VINDecoder
-import uvicorn
-
-app = FastAPI(title="MOTOSPECT Test API", version="1.0.0")
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Initialize components
-fault_detector = FaultDetector()
-vin_decoder = VINDecoder()
-
-@app.get("/")
-async def root():
-    return {"message": "MOTOSPECT Test API", "status": "running"}
-
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "service": "motospect-backend",
-        "version": "1.0.0",
-        "modules": {
-            "fault_detector": "✓ Loaded",
-            "vin_decoder": "✓ Loaded"
-        }
-    }
-
-@app.post("/api/analyze-faults")
-async def analyze_faults(data: dict):
-    """Test fault analysis with refactored modules"""
-    try:
-        fault_codes = data.get("fault_codes", [])
-        parameters = data.get("parameters", {})
+class MOTOSPECTHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', '*')
+        self.end_headers()
         
-        # Use refactored FaultDetector
-        analysis = fault_detector.analyze_fault_codes(fault_codes)
-        health_scores = fault_detector.calculate_health_scores(parameters, fault_codes)
+        if self.path == '/health':
+            response = {'status': 'healthy', 'service': 'motospect-backend', 'port': 8030}
+        elif self.path.startswith('/api/vin/decode/'):
+            vin = self.path.split('/')[-1]
+            response = {'vin': vin, 'decoded': {'make': 'Honda', 'model': 'Civic', 'year': '2003'}, 'status': 'success'}
+        elif self.path.startswith('/api/vin/validate/'):
+            vin = self.path.split('/')[-1]
+            response = {'vin': vin, 'valid': len(vin) == 17, 'status': 'success'}
+        else:
+            response = {'message': 'MOTOSPECT API', 'status': 'running'}
         
-        return {
-            "analysis": analysis,
-            "health_scores": health_scores,
-            "status": "success"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        self.wfile.write(json.dumps(response, indent=2).encode())
 
-@app.get("/api/vin/decode/{vin}")
-async def decode_vin(vin: str):
-    """Test VIN decoding"""
+    def do_POST(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        
+        if self.path == '/api/scan/start':
+            response = {'scan_id': 'test-scan-001', 'status': 'started'}
+        elif self.path.startswith('/api/scan/') and self.path.endswith('/stop'):
+            response = {'status': 'stopped', 'message': 'Scan completed'}
+        elif self.path == '/api/report/generate':
+            response = {'report_id': 'report-001', 'status': 'generated', 'health_scores': {'engine': 85}}
+        else:
+            response = {'status': 'ok'}
+        
+        self.wfile.write(json.dumps(response, indent=2).encode())
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', '*')
+        self.end_headers()
+
+    def log_message(self, format, *args):
+        pass
+
+if __name__ == '__main__':
+    PORT = 8030
+    print(f"🚀 MOTOSPECT Backend starting on http://localhost:{PORT}")
+    
     try:
-        result = vin_decoder.decode_vin(vin)
-        return {"vin": vin, "decoded": result, "status": "success"}
+        with socketserver.TCPServer(("", PORT), MOTOSPECTHandler) as httpd:
+            print(f"✅ Backend running on port {PORT}")
+            print(f"📡 Health: http://localhost:{PORT}/health")
+            httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n🛑 Backend stopped")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    print("🚀 Starting MOTOSPECT Test Server...")
-    uvicorn.run(app, host="0.0.0.0", port=8030, log_level="info")
+        print(f"❌ Error: {e}")

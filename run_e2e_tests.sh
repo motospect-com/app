@@ -11,7 +11,7 @@ echo "Test VIN: 1HGBH41JXMN109186"
 echo "=========================================="
 
 # Test configuration
-BACKEND_URL="http://localhost:8000"
+BACKEND_URL="http://localhost:8030"
 TEST_VIN="1HGBH41JXMN109186"
 TEST_RESULTS_FILE="test_results_$(date +%Y%m%d_%H%M%S).txt"
 

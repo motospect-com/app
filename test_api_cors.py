@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Get backend URL from environment
-backend_url = os.getenv('REACT_APP_BACKEND_URL', 'http://localhost:8000')
+backend_url = os.getenv('REACT_APP_BACKEND_URL', 'http://localhost:8030')
 backend_port = os.getenv('BACKEND_PORT', '8030')
 backend_url = f"http://localhost:{backend_port}"
 

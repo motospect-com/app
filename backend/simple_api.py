@@ -53,11 +53,13 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    import os
+    port = int(os.getenv("PORT", 8030))
     return {
         "status": "healthy",
         "service": "motospect-backend",
         "version": "1.0.0",
-        "port": 8030,
+        "port": port,
         "components": {
             "fault_detector": "✓ Loaded" if fault_detector else "✗ Failed",
             "vin_decoder": "✓ Loaded" if vin_decoder else "✗ Failed"
@@ -109,11 +111,13 @@ async def options_handler(path: str):
     return {"message": "OK"}
 
 if __name__ == "__main__":
-    logger.info("🚀 Starting MOTOSPECT API on port 8030...")
+    import os
+    port = int(os.getenv("PORT", 8030))
+    logger.info(f"🚀 Starting MOTOSPECT API on port {port}...")
     uvicorn.run(
         app, 
         host="0.0.0.0", 
-        port=8030, 
+        port=port, 
         log_level="info",
         access_log=True
     )
