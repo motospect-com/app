@@ -21,26 +21,44 @@ services:
       - mosquitto
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    env_file:
-      - .env
+    build: ./frontend
+    container_name: motospect-frontend
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "3000:3000"
+    environment:
+      - REACT_APP_USE_MQTT=false
+      - REACT_APP_BACKEND_URL=http://localhost:8084
+      - REACT_APP_MQTT_URL=ws://localhost:9001
+      - REACT_APP_MQTT_BASE_TOPIC=motospect/v1
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    depends_on:
-      - backend
-      - mosquitto
+    command: npm start
+
+  customer-portal:
+    build: ./customer-portal
+    container_name: motospect-customer-portal
+    ports:
+      - "3040:3040"
     environment:
-      - CHOKIDAR_USEPOLLING=true
-      - WDS_SOCKET_PORT=${FRONTEND_PORT:-3000}
-      - WDS_SOCKET_HOST=localhost
-      - REACT_APP_USE_MQTT=${REACT_APP_USE_MQTT:-false}
-      - REACT_APP_MQTT_URL=${REACT_APP_MQTT_URL:-ws://localhost:9001}
-      - REACT_APP_MQTT_BASE_TOPIC=${REACT_APP_MQTT_BASE_TOPIC:-motospect/v1}
+      - REACT_APP_BACKEND_URL=http://localhost:8084
+      - REACT_APP_REPORT_URL=http://localhost:3050
+    volumes:
+      - ./customer-portal:/app
+      - /app/node_modules
+    command: npm start
+
+  report-service:
+    build: ./report-service
+    container_name: motospect-report-service
+    ports:
+      - "3050:3050"
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:8084
+    volumes:
+      - ./report-service:/app
+      - /app/node_modules
+    command: npm start
 
   mosquitto:
     image: eclipse-mosquitto:2
