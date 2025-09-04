@@ -33,6 +33,27 @@ class FaultDetector:
     """
     Advanced fault detection for vehicles with engines up to 3L capacity
     """
+
+    # ------------------------------------------------------------------
+    # Public wrappers (added for test compatibility)
+    # ------------------------------------------------------------------
+    def analyze_fault_codes(self, codes):  # pragma: no cover
+        """Public wrapper for _analyze_fault_codes used in tests."""
+        return self._analyze_fault_codes(codes)
+
+    def calculate_health_scores(self, parameters, codes):  # pragma: no cover
+        """Public wrapper for _calculate_health_scores used in tests.
+
+        The original internal method expects faults list & parameters. We
+        first analyse fault codes then delegate.
+        """
+        analysis = self._analyze_fault_codes(codes)
+        faults = analysis.get("faults", []) if isinstance(analysis, dict) else analysis
+        return self._calculate_health_scores(faults, parameters)
+
+    """
+    Advanced fault detection for vehicles with engines up to 3L capacity
+    """
     
     def __init__(self):
         # Parameter thresholds for different engine sizes

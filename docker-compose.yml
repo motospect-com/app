@@ -10,7 +10,7 @@ services:
     environment:
       - ENABLE_MQTT_BRIDGE=${ENABLE_MQTT_BRIDGE:-true}
       - MQTT_BROKER_HOST=${MQTT_BROKER_HOST:-mosquitto}
-      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT:-1883}
+      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT:-1884}
       - MQTT_BASE_TOPIC=${MQTT_BASE_TOPIC:-motospect/v1}
     ports:
       - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
@@ -24,7 +24,7 @@ services:
     build: ./frontend
     container_name: motospect-frontend
     ports:
-      - "3000:3000"
+      - "3030:3000"
     environment:
       - REACT_APP_USE_MQTT=false
       - REACT_APP_BACKEND_URL=http://localhost:8084
@@ -63,8 +63,8 @@ services:
   mosquitto:
     image: eclipse-mosquitto:2
     ports:
-      - "1883:1883"    # MQTT TCP
-      - "9001:9001"    # MQTT over WebSocket
+      - "1884:1883"    # MQTT TCP (using 1884 externally to avoid conflict)
+      - "9002:9001"    # MQTT over WebSocket (using 9002 externally to avoid conflict)
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
 
@@ -74,7 +74,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - MQTT_BROKER_HOST=mosquitto
-      - MQTT_BROKER_PORT=1883
+      - MQTT_BROKER_PORT=1884
       - MQTT_BASE_TOPIC=motospect/v1
     depends_on:
       - mosquitto

@@ -28,7 +28,7 @@
 - [x] Uruchomienie projektu za pomocą `docker-compose`
 - [x] Testowanie komunikacji między backendem a frontendem
 - [x] Testowanie podstawowych funkcjonalności skanowania (z mockowanymi danymi)
-- [ ] Przygotowanie do wdrożenia
+- [x] Przygotowanie do wdrożenia
 
 ## Faza Pilot: Bramka drive-through (budżet ≤ $2500)
 
