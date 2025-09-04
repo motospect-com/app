@@ -6,7 +6,7 @@ import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './App.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8084';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8030';
 
 function ReportViewer() {
   const { reportId } = useParams();

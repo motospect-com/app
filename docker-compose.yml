@@ -1,72 +1,107 @@
+# Optimized for performance with BuildKit
 version: '3.8'
 
-# Common environment variables
-x-common: &common-vars
+# Enable BuildKit for parallel builds and better caching
+x-env: &default-environment
+  # Common environment variables
+  NODE_ENV: production
+  PYTHONDONTWRITEBYTECODE: 1
+  PYTHONUNBUFFERED: 1
+  PYTHONPATH: "/app"
+  # MQTT settings
+  MQTT_BROKER_HOST: "mosquitto"
+  MQTT_BROKER_PORT: 1883
+  MQTT_BASE_TOPIC: "motospect/v1"
+  # Port configurations
   FRONTEND_PORT: 3030
   BACKEND_PORT: 8030
   CUSTOMER_PORTAL_PORT: 3040
   REPORT_SERVICE_PORT: 3050
   MQTT_PORT: 1884
   MQTT_WS_PORT: 9002
-  MQTT_BASE_TOPIC: motospect/v1
+
+# Common build arguments
+x-build-args: &default-build-args
+  BUILDKIT_INLINE_CACHE: 1
+  NODE_ENV: production
+
 
 services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        <<: *default-build-args
     container_name: motospect-backend
-    env_file:
-      - .env
+    env_file: .env
     environment:
-      - PORT=${BACKEND_PORT}
-      - MQTT_BROKER_HOST=mosquitto
-      - MQTT_BROKER_PORT=1883
-      - MQTT_BASE_TOPIC=${MQTT_BASE_TOPIC}
-      - ENABLE_MQTT_BRIDGE=${ENABLE_MQTT_BRIDGE:-true}
+      <<: *default-environment
+      PORT: ${BACKEND_PORT}
+      ENABLE_MQTT_BRIDGE: ${ENABLE_MQTT_BRIDGE:-true}
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     volumes:
       - ./backend:/app
+      # Mount only necessary directories for development
+      - type: bind
+        source: ./backend/app
+        target: /app/app
+      - type: volume
+        source: backend-deps
+        target: /root/.cache/pip
     networks:
       - motospect-network
-    command: uvicorn main:app --host 0.0.0.0 --port ${BACKEND_PORT} --reload
-    depends_on:
-      mosquitto:
-        condition: service_healthy
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${BACKEND_PORT}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+      args:
+        <<: *default-build-args
+        NODE_ENV: production
+    container_name: motospect-frontend
     environment:
-      - PORT=${FRONTEND_PORT}
-      - REACT_APP_MQTT_URL=ws://localhost:${MQTT_WS_PORT}
-      - REACT_APP_MQTT_BASE_TOPIC=${MQTT_BASE_TOPIC}
-      - REACT_APP_MQTT_USERNAME=${MQTT_USER:-motospect}
-      - REACT_APP_MQTT_PASSWORD=${MQTT_PASSWORD:-motospect123}
-      - REACT_APP_BACKEND_URL=http://localhost:${BACKEND_PORT}
-      - REACT_APP_BACKEND_WS_URL=ws://localhost:${BACKEND_PORT}/ws
-      - REACT_APP_USE_MQTT=true
-      - CHOKIDAR_USEPOLLING=true
-      - GENERATE_SOURCEMAP=false
+      <<: *default-environment
+      PORT: ${FRONTEND_PORT}
+      REACT_APP_MQTT_URL: ws://mosquitto:${MQTT_WS_PORT}
+      REACT_APP_MQTT_BASE_TOPIC: ${MQTT_BASE_TOPIC}
+      REACT_APP_MQTT_USERNAME: ${MQTT_USER:-motospect}
+      REACT_APP_MQTT_PASSWORD: ${MQTT_PASSWORD:-motospect123}
+      REACT_APP_BACKEND_URL: http://backend:${BACKEND_PORT}
+      REACT_APP_BACKEND_WS_URL: ws://backend:${BACKEND_PORT}/ws
+      REACT_APP_USE_MQTT: "true"
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    networks:
+      - motospect-network
+    restart: unless-stopped
     depends_on:
       - mosquitto
       - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    networks:
-      - motospect-network
-    command: npm start
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   customer-portal:
     build: ./customer-portal
@@ -112,12 +147,12 @@ services:
     container_name: motospect-mosquitto
     ports:
       - "${MQTT_PORT}:1883"         # MQTT TCP
-      - "${MQTT_WS_PORT}:9001"      # MQTT over WebSocket (matches mosquitto.conf)
+      - "${MQTT_WS_PORT}:9001"      # MQTT over WebSocket
     environment:
       - MOSQUITTO_USERNAME=${MQTT_USER:-motospect}
       - MOSQUITTO_PASSWORD=${MQTT_PASSWORD:-motospect123}
     volumes:
-      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
     command: /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf
@@ -130,6 +165,11 @@ services:
     networks:
       - motospect-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 128M
 
   firmware:
     build:
@@ -155,4 +195,10 @@ networks:
 
 volumes:
   mosquitto_data:
+    name: motospect_mosquitto_data
   mosquitto_log:
+    name: motospect_mosquitto_log
+  backend-deps:
+    name: motospect_backend_deps
+  frontend-deps:
+    name: motospect_frontend_deps
