@@ -12,6 +12,8 @@ services:
     volumes:
       - ./backend:/app
     command: uvicorn main:app --host ${BACKEND_HOST:-0.0.0.0} --port ${BACKEND_PORT:-8000} --reload
+    depends_on:
+      - mosquitto
 
   frontend:
     build:
@@ -26,7 +28,29 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+      - mosquitto
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WDS_SOCKET_PORT=${FRONTEND_PORT:-3000}
       - WDS_SOCKET_HOST=localhost
+      - REACT_APP_USE_MQTT=${REACT_APP_USE_MQTT:-false}
+      - REACT_APP_MQTT_URL=${REACT_APP_MQTT_URL:-ws://localhost:9001}
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"    # MQTT TCP
+      - "9001:9001"    # MQTT over WebSocket
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  firmware:
+    build:
+      context: ./firmware
+      dockerfile: Dockerfile
+    environment:
+      - MQTT_BROKER_HOST=mosquitto
+      - MQTT_BROKER_PORT=1883
+      - MQTT_BASE_TOPIC=motospect/v1
+    depends_on:
+      - mosquitto
