@@ -467,10 +467,10 @@ Wymagania: Docker, Docker Compose
 ## Struktura kodu
 
 - `backend/main.py` – FastAPI, CORS, REST API skanu (start/stop/wyniki)
-- `backend/websocket_handler.py` – endpoint `ws://.../ws` ze strumieniem danych (mock)
-- `backend/data_generator.py` – generatory danych (tof/thermal/uv/paint)
-- `frontend/src/VehicleVisualization.jsx` – wizualizacja chmury punktów (Three.js)
-- `docker-compose.yml` – konfiguracja portów i trybu dev
+  - `backend/websocket_handler.py` – endpoint `ws://.../ws` ze strumieniem danych (mock)
+  - `backend/data_generator.py` – generatory danych (tof/thermal/uv/paint/audio)
+  - `frontend/src/VehicleVisualization.jsx` – wizualizacja chmury punktów (Three.js)
+  - `docker-compose.yml` – konfiguracja portów i trybu dev
 
 ## API (MVP)
 
@@ -494,6 +494,13 @@ Wymagania: Docker, Docker Compose
     "temperatures": [..]
   }
   ```
+  Dodatkowo (multipleksacja kanałów):
+  - `channel`: taki sam jak `scan_type` dla zachowania kompatybilności wstecznej
+  - `ts`: znacznik czasu (UNIX float) wspólny dla ramek wysłanych w tym samym tyku
+
+> Uwaga: Serwer obecnie nadaje kilka ramek w każdej sekundzie – po jednej dla kanałów: `tof`, `thermal`, `uv`, `paint_thickness`.
+>
+> Dodano kanał `audio` (level + spectrum) oraz w UI panele Live: heatmapa termiczna, profil ToF, wskaźnik poziomu audio i widmo. 3D chmura punktów nadal renderuje według aktywnego kanału.
 
 ## Uruchamianie i logi
 
@@ -527,14 +534,10 @@ Wymagania: Docker, Docker Compose
 - [x] WebSocket mock i wizualizacja 3D (Three.js) – `VehicleVisualization.jsx`
 - [x] CORS i minimalne REST API (start/stop/wyniki) – `backend/main.py`
 - [x] Stabilizacja dev (usunięcie brakujących ikon, wyłączenie StrictMode)
-- [ ] Multipleksacja kanałów WS (rgb_meta/thermal/audio/tof)
+- [x] Multipleksacja kanałów WS (rgb_meta/thermal/audio/tof) – backend + filtr kanałów w UI
 - [ ] Panel Live: RGB, termika, audio-level/beam, profil ToF
+  - [x] termika (heatmap), ToF (profil), audio-level + spectrum
+  - [ ] RGB stream, audio beamforming
 - [ ] Progi anomalii (temp/dB/odległość) + alerty w UI
 - [ ] Snapshot raportu (JSON + PNG) i pobranie
 - [ ] Testy poligonowe (10–20 aut) – logi i obserwacje
-
-## Notatki dot. DEV
-
-- CRA w trybie dev domyślnie używa WebSocketów – ustawione `WDS_SOCKET_PORT`/`HOST` w `docker-compose.yml`.
-- Przy błędach WS sprawdź: `curl -i http://localhost:8084/` oraz logi backendu.
-- Hard refresh przeglądarki po zmianach frontendu (Ctrl+Shift+R).

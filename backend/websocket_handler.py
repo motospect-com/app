@@ -7,6 +7,7 @@ from data_generator import (
     generate_thermal_scan_data,
     generate_uv_scan_data,
     generate_paint_thickness_data,
+    generate_audio_data,
 )
 
 router = APIRouter()
@@ -28,6 +29,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 generate_thermal_scan_data(),
                 generate_uv_scan_data(),
                 generate_paint_thickness_data(),
+                generate_audio_data(),
             ]
             now = time.time()
             for data in frames:

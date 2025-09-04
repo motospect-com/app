@@ -46,13 +46,24 @@ def generate_paint_thickness_data():
         'thickness': thickness.tolist()
     }
 
+def generate_audio_data():
+    """Generuje przykładowe dane audio: poziom i widmo (mock)."""
+    level = float(np.random.uniform(0.0, 1.0))
+    spectrum = np.random.uniform(0.0, 1.0, size=64)
+    return {
+        'scan_type': 'audio',
+        'level': level,
+        'spectrum': spectrum.tolist(),
+    }
+
 def generate_scan_data():
     """Generuje losowy typ danych skanowania."""
     scan_functions = [
         generate_tof_scan_data,
         generate_thermal_scan_data,
         generate_uv_scan_data,
-        generate_paint_thickness_data
+        generate_paint_thickness_data,
+        generate_audio_data
     ]
     return random.choice(scan_functions)()
 
