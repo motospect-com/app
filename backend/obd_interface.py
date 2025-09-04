@@ -2,7 +2,6 @@
 OBD2/OBD3 Interface Module for Vehicle Diagnostics
 Supports reading parameters, DTCs, and vehicle identification
 """
-import json
 import asyncio
 from typing import Dict, List, Optional, Any
 from enum import Enum
@@ -103,13 +102,18 @@ class OBDInterface:
             model="Model S" if "TSLA" in vin else "Civic",
             year=2020 + int(vin[9]) if vin[9].isdigit() else 2020,
             engine_size=2.0,  # Would read from ECU
+        )
         
         # If VIN available, decode basic info
         if vin:
             decoded = self._decode_vin_basic(vin)
-            vehicle_info.update(decoded)
+            # Update vehicle info with decoded VIN data
+            if decoded.get("make"):
+                self.vehicle_info.make = decoded["make"]
+            if decoded.get("year"):
+                self.vehicle_info.year = decoded["year"]
             
-        return vehicle_info
+        return self.vehicle_info
     
     async def _read_vin(self) -> Optional[str]:
         """Read VIN from Mode 09 PID 02"""
@@ -219,15 +223,6 @@ class OBDInterface:
             "JH4": {"make": "Acura", "country": "Japan"},
             "1FA": {"make": "Ford", "country": "USA"},
             "2T1": {"make": "Toyota", "country": "Canada"},
-            "1HG": "Honda", "1H4": "Honda",
-            "WBA": "BMW", "WBS": "BMW",
-            "5YJ": "Tesla",
-            "WAU": "Audi", "TRU": "Audi",
-            "WVW": "Volkswagen", "3VW": "Volkswagen",
-            "JM1": "Mazda", "JM3": "Mazda",
-            "KNA": "Kia", "KND": "Kia",
-            "1G1": "Chevrolet", "1GC": "Chevrolet",
-            "1FA": "Ford", "1FB": "Ford",
         }
         wmi = vin[:3] if len(vin) >= 3 else ""
         return wmi_map.get(wmi, "Unknown")

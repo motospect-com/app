@@ -5,10 +5,11 @@ import asyncio
 import uuid
 import os
 from typing import Dict, Any, Optional
-from mqtt_bridge import mqtt_bridge
+from mqtt_bridge import MQTTBridge
 from vin_decoder import VINDecoder
 from obd_interface import OBDInterface
 from fault_detector import FaultDetector
+from vehicle_database import VehicleDatabase
 from pydantic import BaseModel
 import random
 import numpy as np
@@ -24,17 +25,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize modules
+# Initialize services
 vin_decoder = VINDecoder()
-obd_interface = OBDInterface()
+obd_interface = OBDInterface(port="/dev/ttyUSB0")
 fault_detector = FaultDetector()
+vehicle_db = VehicleDatabase()
 
+# MQTT Bridge - conditionally enabled
+mqtt_enabled = os.getenv("ENABLE_MQTT_BRIDGE", "false").lower() == "true"
+mqtt_bridge_instance = None
+if mqtt_enabled:
+    mqtt_bridge_instance = MQTTBridge()
+else:
+    print("[Backend] MQTT Bridge disabled")
 
 # Initialize MQTT bridge if enabled
 @app.on_event("startup")
 def on_startup():
-    if os.getenv("ENABLE_MQTT_BRIDGE", "true").lower() == "true":
-        mqtt_bridge.connect()
+    if mqtt_enabled:
+        mqtt_bridge_instance.connect()
 
 
 # --- Simple Scan Manager (in-memory) ---
@@ -240,16 +249,56 @@ async def get_report(report_id: str):
     return report
 
 
-@app.get("/api/obd/autodetect")
-async def obd_autodetect():
+@app.get("/api/obd/auto-detect")
+async def obd_auto_detect():
     """Auto-detect vehicle via OBD connection"""
     try:
-        vehicle_info = await obd_interface.get_vehicle_info()
-        return vehicle_info
+        if not obd_interface.connect():
+            raise HTTPException(status_code=503,
+                                detail="Failed to connect to OBD")
+        
+        vehicle_info = obd_interface.auto_detect_vehicle()
+        obd_interface.disconnect()
+        
+        return {"status": "success", "vehicle": vehicle_info}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"status": "error", "message": str(e)}
 
-# --- OLD ENDPOINT (deprecated but kept for compatibility) ---
+
+@app.get("/api/vehicle/database/{vin}")
+async def get_vehicle_database_info(vin: str):
+    """Get comprehensive vehicle info from database APIs"""
+    try:
+        vehicle_data = await vehicle_db.get_vehicle_by_vin(vin)
+        return {"status": "success", "data": vehicle_data}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/vehicle/maintenance")
+async def get_maintenance_schedule(
+    make: str, model: str, year: int, mileage: int
+):
+    """Get maintenance schedule for vehicle"""
+    try:
+        schedule = await vehicle_db.get_maintenance_schedule(
+            make, model, year, mileage
+        )
+        return {"status": "success", "schedule": schedule}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/vehicle/common-problems")
+async def get_common_problems(make: str, model: str, year: int):
+    """Get common problems for specific vehicle"""
+    try:
+        problems = await vehicle_db.get_common_problems(make, model, year)
+        return {"status": "success", "problems": problems}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 @app.post("/upload/{device_type}")
 def upload_data(device_type: str, data=None):
     _ = scan_mgr.start(vehicle_id=None)  # Start scan but don't use ID
