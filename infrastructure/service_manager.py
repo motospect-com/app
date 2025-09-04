@@ -182,6 +182,7 @@ class ServiceManager:
             service_info.status = ServiceStatus.STARTING
             service_info.started_at = time.time()
             
+            import os
             process = subprocess.Popen(
                 service_info.config.command,
                 cwd=service_info.config.working_dir,
