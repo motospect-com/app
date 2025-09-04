@@ -19,7 +19,7 @@ sys.path.append(str(infrastructure_path))
 
 from vin_decoder import VINDecoder
 from external_apis import NHTSAApi
-from config import config
+from config import get_vin_decoder_port
 
 app = FastAPI(
     title="MOTOSPECT VIN Decoder Service",
@@ -148,12 +148,12 @@ async def service_info():
             "/api/vin/validate/{vin}",
             "/api/vin/recalls/{vin}"
         ],
-        "port": int(os.getenv("PORT", config.VIN_DECODER_SERVICE_PORT))
+        "port": int(os.getenv("PORT", get_vin_decoder_port()))
     }
 
 if __name__ == "__main__":
     # Use port from config or environment variable
-    port = int(os.getenv("PORT", config.VIN_DECODER_SERVICE_PORT))
+    port = int(os.getenv("PORT", get_vin_decoder_port()))
     print(f"🚀 Starting VIN Decoder Service on port {port}")
     
     uvicorn.run(

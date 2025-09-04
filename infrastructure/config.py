@@ -81,3 +81,29 @@ class Config:
 
 # Global config instance
 config = Config()
+
+
+# Convenience functions for microservices
+def get_vin_decoder_port() -> int:
+    """Get VIN Decoder Service port"""
+    return config.VIN_DECODER_SERVICE_PORT
+
+
+def get_fault_detector_port() -> int:
+    """Get Fault Detector Service port"""
+    return config.FAULT_DETECTOR_SERVICE_PORT
+
+
+def get_diagnostic_service_port() -> int:
+    """Get Diagnostic Service port"""
+    return config.DIAGNOSTIC_SERVICE_PORT
+
+
+def get_mqtt_bridge_port() -> int:
+    """Get MQTT Bridge Service port"""
+    return config.MQTT_BRIDGE_SERVICE_PORT
+
+
+def get_api_gateway_port() -> int:
+    """Get API Gateway port"""
+    return config.API_GATEWAY_PORT
