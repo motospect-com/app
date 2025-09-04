@@ -4,7 +4,7 @@ Supports NHTSA and fallback local decoding
 """
 import aiohttp
 import json
-from typing import Dict, Optional, Any
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 import re
 
