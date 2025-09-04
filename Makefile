@@ -1,13 +1,15 @@
 # MotoSpect Project Makefile
 # Vehicle diagnostic system for cars, vans, SUVs up to 3L engine capacity
 
-.PHONY: help build up down restart logs test test-e2e test-backend test-mqtt test-system test-api test-complete test-ansible clean install dev prod status
+.PHONY: help build up down restart logs test test-e2e test-backend test-mqtt test-system test-api test-complete test-ansible clean install dev prod status quick-start dev-start
 
 # Default target - show help
 help:
 	@echo "MotoSpect System Commands:"
+	@echo "  make quick-start - Szybkie uruchomienie bez budowania (30s)"
+	@echo "  make dev-start  - Development mode z cache (60s)"
 	@echo "  make install    - Install Python dependencies"
-	@echo "  make build      - Build Docker images"
+	@echo "  make build      - Build Docker images (powolne - 10+ min)"
 	@echo "  make up         - Start all services"
 	@echo "  make down       - Stop all services"
 	@echo "  make restart    - Restart all services"
@@ -23,6 +25,31 @@ help:
 	@echo "  make dev        - Start in development mode"
 	@echo "  make prod       - Start in production mode"
 	@echo "  make clean      - Clean up artifacts"
+
+# Szybkie uruchomienie - bez budowania Docker (30s)
+quick-start:
+	@echo "🚀 Uruchamianie MOTOSPECT - tryb szybki..."
+	pkill -f "python.*8030" || true
+	pkill -f "node.*3030" || true
+	pkill -f "node.*3040" || true
+	@echo "Backend (port 8030): http://localhost:8030"
+	cd backend && nohup python3 simple_api.py > ../logs/backend.log 2>&1 &
+	sleep 2
+	@echo "Frontend (port 3030): http://localhost:3030"
+	cd frontend && nohup npm start > ../logs/frontend.log 2>&1 &
+	@echo "Customer Portal (port 3040): http://localhost:3040" 
+	cd customer-portal && nohup npm start > ../logs/customer.log 2>&1 &
+	@echo "✅ Serwisy uruchomione! Sprawdź: make status"
+
+# Development mode z Docker cache (60s)
+dev-start:
+	@echo "🔧 Uruchamianie w trybie development..."
+	docker-compose -f docker-compose.dev.yml down --remove-orphans
+	DOCKER_BUILDKIT=1 docker-compose -f docker-compose.dev.yml up -d
+	@echo "✅ Development mode aktywny!"
+	@echo "Backend: http://localhost:8030"
+	@echo "Frontend: http://localhost:3030"
+	@echo "Customer Portal: http://localhost:3040"
 
 # Install dependencies
 install:
@@ -115,9 +142,16 @@ status:
 	@echo "Testing backend health..."
 	@curl -s http://localhost:8030/health | python3 -m json.tool || echo "Backend not responding"
 
-# Clean up project artifacts
+# Clean up artifacts
 clean:
+	docker-compose down --volumes --remove-orphans
+	docker-compose -f docker-compose.dev.yml down --volumes --remove-orphans
+	docker system prune -af
+	docker volume prune -f
+	pkill -f "python.*8030" || true
+	pkill -f "node.*3030" || true
+	pkill -f "node.*3040" || true
+	mkdir -p logs
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -exec rm -r {} +
-	docker-compose down -v --remove-orphans
 	rm -f test_results_*.txt diagnostic_report_*.json

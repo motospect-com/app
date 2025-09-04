@@ -1,6 +1,13 @@
 # Optimized for performance with BuildKit
 version: '3.8'
 
+# Named volumes for caching
+volumes:
+  node_modules_frontend:
+  node_modules_customer:
+  node_modules_report:
+  pip_cache:
+
 # Enable BuildKit for parallel builds and better caching
 x-env: &default-environment
   # Common environment variables
@@ -43,6 +50,7 @@ services:
       - "8030:8030"
     volumes:
       - ./backend:/app
+      - pip_cache:/root/.cache/pip
     networks:
       - motospect-network
     restart: unless-stopped

@@ -1,0 +1,73 @@
+# Development mode - szybkie uruchamianie bez budowania
+version: '3.8'
+
+volumes:
+  node_modules_cache:
+  pip_cache:
+
+services:
+  backend-dev:
+    image: python:3.9-slim
+    container_name: motospect-backend-dev
+    working_dir: /app
+    environment:
+      PYTHONUNBUFFERED: 1
+      PYTHONPATH: /app
+      PORT: 8030
+    ports:
+      - "8030:8030"
+    volumes:
+      - ./backend:/app
+      - pip_cache:/root/.cache/pip
+    command: >
+      sh -c "
+        pip install --cache-dir /root/.cache/pip fastapi uvicorn python-multipart &&
+        python simple_api.py
+      "
+    networks:
+      - motospect-network
+
+  frontend-dev:
+    image: node:18-alpine
+    container_name: motospect-frontend-dev
+    working_dir: /app
+    environment:
+      NODE_ENV: development
+      PORT: 3030
+      REACT_APP_BACKEND_URL: http://localhost:8030
+    ports:
+      - "3030:3030"
+    volumes:
+      - ./frontend:/app
+      - node_modules_cache:/app/node_modules
+    command: >
+      sh -c "
+        npm install --prefer-offline --no-audit --cache /tmp/npm-cache &&
+        PORT=3030 npm start
+      "
+    networks:
+      - motospect-network
+
+  customer-portal-dev:
+    image: node:18-alpine
+    container_name: motospect-customer-dev
+    working_dir: /app
+    environment:
+      NODE_ENV: development
+      PORT: 3040
+    ports:
+      - "3040:3040"
+    volumes:
+      - ./customer-portal:/app
+      - node_modules_cache:/app/node_modules
+    command: >
+      sh -c "
+        npm install --prefer-offline --no-audit --cache /tmp/npm-cache &&
+        PORT=3040 npm start
+      "
+    networks:
+      - motospect-network
+
+networks:
+  motospect-network:
+    driver: bridge
