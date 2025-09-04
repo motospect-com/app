@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { Client as MqttClient } from 'paho-mqtt';
+import SpectrumSVG from './components/SpectrumSVG';
+import ToFProfileSVG from './components/ToFProfileSVG';
 
 // Funkcja pomocnicza do mapowania wartości na kolor w gradiencie
 const mapValueToColor = (value, min, max) => {
@@ -35,8 +38,6 @@ const VehicleVisualization = () => {
 
   // Canvas refs for panels
   const thermalCanvasRef = useRef(null);
-  const tofCanvasRef = useRef(null);
-  const audioCanvasRef = useRef(null);
 
   useEffect(() => {
     selectedChannelRef.current = selectedChannel;
@@ -44,9 +45,13 @@ const VehicleVisualization = () => {
 
   const httpBase =
     process.env.REACT_APP_BACKEND_HTTP_URL || `http://${window.location.hostname}:8084`;
+  const useMqtt = String(process.env.REACT_APP_USE_MQTT || 'false') === 'true';
+  const mqttUrl = process.env.REACT_APP_MQTT_URL || `ws://${window.location.hostname}:9001`;
+  const mqttBaseTopic = process.env.REACT_APP_MQTT_BASE_TOPIC || 'motospect/v1';
 
-  // WebSocket setup – prefers REACT_APP_... else fallback to window.hostname:8084
+  // Data ingress via WebSocket (fallback when MQTT is disabled)
   useEffect(() => {
+    if (useMqtt) return undefined;
     const wsUrl =
       process.env.REACT_APP_BACKEND_WS_URL || `ws://${window.location.hostname}:8084/ws`;
     const ws = new WebSocket(wsUrl);
@@ -59,7 +64,6 @@ const VehicleVisualization = () => {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       const channel = data.channel || data.scan_type || 'unknown';
-
       // Store per-channel last frames for Live panels
       switch (channel) {
         case 'tof':
@@ -80,8 +84,6 @@ const VehicleVisualization = () => {
         default:
           break;
       }
-
-      // Update 3D visualization only for selected channel
       if (channel === selectedChannelRef.current) {
         setScanData(data);
         setScanType(data.scan_type || 'N/A');
@@ -103,7 +105,85 @@ const VehicleVisualization = () => {
         ws.close();
       } catch (_) {}
     };
-  }, []);
+  }, [useMqtt]);
+
+  // Data ingress via MQTT (preferred when enabled)
+  useEffect(() => {
+    if (!useMqtt) return undefined;
+    let client;
+    try {
+      client = new MqttClient(mqttUrl, `ui-${Math.floor(Math.random() * 1e6)}`);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[MQTT] Client init failed', e);
+      return undefined;
+    }
+
+    client.onConnectionLost = (resp) => {
+      if (resp.errorCode !== 0) {
+        // eslint-disable-next-line no-console
+        console.warn('[MQTT] connection lost', resp.errorMessage);
+      }
+    };
+
+    client.onMessageArrived = (message) => {
+      try {
+        const data = JSON.parse(message.payloadString);
+        const channel = data.channel || data.scan_type || 'unknown';
+        switch (channel) {
+          case 'tof':
+            setTofData(data);
+            break;
+          case 'thermal':
+            setThermalData(data);
+            break;
+          case 'uv':
+            setUvData(data);
+            break;
+          case 'paint_thickness':
+            setPaintData(data);
+            break;
+          case 'audio':
+            setAudioData(data);
+            break;
+          default:
+            break;
+        }
+        if (channel === selectedChannelRef.current) {
+          setScanData(data);
+          setScanType(data.scan_type || 'N/A');
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('[MQTT] bad payload', e);
+      }
+    };
+
+    client.connect({
+      timeout: 5,
+      useSSL: mqttUrl.startsWith('wss://'),
+      onSuccess: () => {
+        // eslint-disable-next-line no-console
+        console.info('[MQTT] connected', mqttUrl);
+        try {
+          client.subscribe(`${mqttBaseTopic}/+`, { qos: 0 });
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error('[MQTT] subscribe failed', e);
+        }
+      },
+      onFailure: (err) => {
+        // eslint-disable-next-line no-console
+        console.error('[MQTT] connect failed', err);
+      },
+    });
+
+    return () => {
+      try {
+        client.disconnect();
+      } catch (_) {}
+    };
+  }, [useMqtt, mqttUrl, mqttBaseTopic]);
 
   // Initialize Three.js once
   useEffect(() => {
@@ -281,54 +361,14 @@ const VehicleVisualization = () => {
     }
   }, [thermalData]);
 
-  // Draw ToF profile when tofData changes
-  useEffect(() => {
-    if (!tofData || !tofCanvasRef.current) return;
-    const canvas = tofCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width;
-    const H = canvas.height;
-    ctx.clearRect(0, 0, W, H);
-
-    const pts = tofData.points || [];
-    if (!pts.length) return;
-    // Use distance magnitude as profile
-    const distances = pts.slice(0, 300).map((p) => Math.sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]));
-    const minD = 0;
-    const maxD = 180; // approx for our random data
-
-    ctx.strokeStyle = '#1976d2';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    distances.forEach((d, i) => {
-      const x = (i / (distances.length - 1)) * (W - 1);
-      const y = H - ((d - minD) / (maxD - minD)) * H;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
+  // Memoized derived arrays for SVG components
+  const tofDistances = React.useMemo(() => {
+    const pts = tofData?.points || [];
+    if (!pts.length) return [];
+    const arr = pts.slice(0, 300).map((p) => Math.sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]));
+    return arr;
   }, [tofData]);
-
-  // Draw audio spectrum when audioData changes
-  useEffect(() => {
-    if (!audioData || !audioCanvasRef.current) return;
-    const canvas = audioCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width;
-    const H = canvas.height;
-    ctx.clearRect(0, 0, W, H);
-
-    const spectrum = audioData.spectrum || [];
-    const n = spectrum.length || 0;
-    if (!n) return;
-
-    const barW = Math.max(1, Math.floor(W / n));
-    spectrum.forEach((val, i) => {
-      const h = Math.max(1, Math.floor(val * H));
-      ctx.fillStyle = '#4caf50';
-      ctx.fillRect(i * barW, H - h, barW - 1, h);
-    });
-  }, [audioData]);
+  const audioSpectrum = audioData?.spectrum || [];
 
   // Minimal anomaly detection banner
   const anomalies = [];
@@ -440,7 +480,7 @@ const VehicleVisualization = () => {
 
         <div style={{ border: '1px solid #eee', borderRadius: 6, padding: 8 }}>
           <div style={{ marginBottom: 6 }}><b>ToF profile</b></div>
-          <canvas ref={tofCanvasRef} width={320} height={160} style={{ width: '100%' }} />
+          <ToFProfileSVG values={tofDistances} width={320} height={160} />
         </div>
 
         <div style={{ border: '1px solid #eee', borderRadius: 6, padding: 8 }}>
@@ -466,7 +506,7 @@ const VehicleVisualization = () => {
               />
             </div>
           </div>
-          <canvas ref={audioCanvasRef} width={320} height={100} style={{ width: '100%' }} />
+          <SpectrumSVG values={audioSpectrum} width={320} height={100} />
         </div>
       </div>
     </div>

@@ -6,6 +6,11 @@ import uuid
 
 import websocket_handler
 from data_generator import generate_scan_data
+from mqtt_bridge import (
+    router as mqtt_router,
+    bridge as mqtt_bridge,
+    is_enabled as mqtt_enabled,
+)
 
 
 app = FastAPI()
@@ -15,17 +20,37 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"]
-    ,
-    allow_headers=["*"]
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(websocket_handler.router)
+app.include_router(mqtt_router)
 
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Motospect API"}
+
+
+@app.on_event("startup")
+def on_startup():
+    # Start MQTT bridge if enabled
+    try:
+        if mqtt_enabled():
+            mqtt_bridge.start()
+    except Exception as e:
+        # Do not crash the app on MQTT failure; expose via logs
+        print(f"[startup] MQTT bridge error: {e}")
+
+
+@app.on_event("shutdown")
+def on_shutdown():
+    try:
+        if mqtt_enabled():
+            mqtt_bridge.stop()
+    except Exception as e:
+        print(f"[shutdown] MQTT bridge error: {e}")
 
 
 # --- Simple Scan Manager (in-memory) ---

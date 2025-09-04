@@ -4,4 +4,4 @@ uvicorn[standard]
 numpy
 python-multipart
 websockets
-
+paho-mqtt

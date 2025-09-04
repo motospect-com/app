@@ -502,6 +502,59 @@ Wymagania: Docker, Docker Compose
 >
 > Dodano kanał `audio` (level + spectrum) oraz w UI panele Live: heatmapa termiczna, profil ToF, wskaźnik poziomu audio i widmo. 3D chmura punktów nadal renderuje według aktywnego kanału.
 
+## MQTT Architecture (Pilot)
+
+- Broker: Eclipse Mosquitto in Docker (`mosquitto/`), TCP 1883, WebSocket 9001.
+- Firmware publisher: `firmware/publisher.py` publishes JSON frames to `{MQTT_BASE_TOPIC}/{channel}`.
+- Backend bridge: `backend/mqtt_bridge.py` optionally subscribes to `{MQTT_BASE_TOPIC}/+` and exposes:
+  - `GET /api/latest` – last seen frames by channel
+  - `GET /api/latest/{channel}` – last frame for a channel
+  - `POST /api/cmd/{topicSuffix}` – publish commands to firmware via MQTT
+- Frontend: `frontend/src/VehicleVisualization.jsx` can ingest via MQTT WebSocket when `REACT_APP_USE_MQTT=true`, else falls back to backend WebSocket.
+
+### MQTT Environment Variables
+
+- Backend (`backend/main.py` + `mqtt_bridge.py`):
+  - `ENABLE_MQTT_BRIDGE` (default `true`)
+  - `MQTT_BROKER_HOST` (default `mosquitto` in Compose)
+  - `MQTT_BROKER_PORT` (default `1883`)
+  - `MQTT_BASE_TOPIC` (default `motospect/v1`)
+
+- Frontend (`VehicleVisualization.jsx`):
+  - `REACT_APP_USE_MQTT` (default `false`)
+  - `REACT_APP_MQTT_URL` (default `ws://localhost:9001`)
+  - `REACT_APP_MQTT_BASE_TOPIC` (default `motospect/v1`)
+  - `REACT_APP_BACKEND_WS_URL` stays supported as a fallback
+
+- Firmware (`firmware/publisher.py`):
+  - `MQTT_BROKER_HOST` (default `mosquitto`)
+  - `MQTT_BROKER_PORT` (default `1883`)
+  - `MQTT_BASE_TOPIC` (default `motospect/v1`)
+
+### Bring-up and Testing
+
+1. Start the stack:
+   ```bash
+   docker compose up --build
+   ```
+2. Verify broker:
+   - WebSocket UI should connect at `ws://localhost:9001` (frontend will do this when enabled).
+3. Toggle frontend ingestion to MQTT:
+   - In Compose, set `REACT_APP_USE_MQTT=true` under `frontend.environment` or export in shell.
+4. Check backend MQTT bridge:
+   - `curl -s http://localhost:8084/api/latest | jq .`
+   - `curl -s http://localhost:8084/api/latest/tof | jq .`
+5. UI smoke test:
+   - Navigate to http://localhost:3030/ and observe live panels:
+     - Thermal heatmap (canvas)
+     - ToF profile (SVG)
+     - Audio level + spectrum (SVG)
+
+### Notes
+
+- For development, Mosquitto allows anonymous connections and no persistence.
+- Topics are organized per-channel under `MQTT_BASE_TOPIC` for clean separation.
+
 ## Uruchamianie i logi
 
 - Start/rebuild: `docker compose up -d --build`

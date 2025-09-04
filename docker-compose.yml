@@ -7,6 +7,11 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    environment:
+      - ENABLE_MQTT_BRIDGE=${ENABLE_MQTT_BRIDGE:-true}
+      - MQTT_BROKER_HOST=${MQTT_BROKER_HOST:-mosquitto}
+      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT:-1883}
+      - MQTT_BASE_TOPIC=${MQTT_BASE_TOPIC:-motospect/v1}
     ports:
       - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
     volumes:
@@ -35,6 +40,7 @@ services:
       - WDS_SOCKET_HOST=localhost
       - REACT_APP_USE_MQTT=${REACT_APP_USE_MQTT:-false}
       - REACT_APP_MQTT_URL=${REACT_APP_MQTT_URL:-ws://localhost:9001}
+      - REACT_APP_MQTT_BASE_TOPIC=${REACT_APP_MQTT_BASE_TOPIC:-motospect/v1}
 
   mosquitto:
     image: eclipse-mosquitto:2
