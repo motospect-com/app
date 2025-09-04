@@ -38,21 +38,21 @@ function App() {
   const handleVinSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     try {
       // Validate and decode VIN
       const response = await axios.post(`${BACKEND_URL}/api/vehicle/decode`, { vin });
       setVehicleData(response.data);
-      
+
       // Start scanning simulation
       setStage('scanning');
       setScanProgress(0);
       setScanPosition(0);
-      
+
       // Initiate actual scan
-      await axios.post(`${BACKEND_URL}/api/scan/start`, { 
-        vin, 
-        scan_type: 'comprehensive' 
+      await axios.post(`${BACKEND_URL}/api/scan/start`, {
+        vin,
+        scan_type: 'comprehensive'
       });
     } catch (err) {
       setError('Invalid VIN or vehicle not supported. Please try again.');
@@ -66,15 +66,15 @@ function App() {
         vin: vin,
         vehicle: vehicleData
       });
-      
+
       const reportId = response.data.report_id;
       setReportId(reportId);
-      
+
       // Generate QR code for report access
       const reportAccessUrl = `${REPORT_URL}/report/${reportId}`;
       const qrDataUrl = await QRCode.toDataURL(reportAccessUrl);
       setQrCodeUrl(qrDataUrl);
-      
+
       setStage('complete');
     } catch (err) {
       setError('Error generating report. Please contact staff.');
@@ -129,7 +129,7 @@ function App() {
                   <p>Under 5 minutes</p>
                 </div>
               </div>
-              <button 
+              <button
                 className="btn-primary"
                 onClick={() => setStage('vin')}
               >
@@ -150,7 +150,7 @@ function App() {
               <p className="instructions">
                 Enter your vehicle's VIN number or connect via OBD port for auto-detection.
               </p>
-              
+
               <form onSubmit={handleVinSubmit} className="vin-form">
                 <input
                   type="text"
@@ -182,7 +182,7 @@ function App() {
                 </div>
               )}
 
-              <button 
+              <button
                 className="btn-back"
                 onClick={() => setStage('welcome')}
               >
@@ -216,7 +216,7 @@ function App() {
                   <div className="gate-frame">
                     <div className="scanner-beam" style={{ left: `${scanPosition % 100}%` }} />
                   </div>
-                  
+
                   <motion.div
                     className="vehicle-icon"
                     animate={{ x: scanPosition * 3 }}
@@ -240,7 +240,7 @@ function App() {
 
                 <div className="progress-container">
                   <div className="progress-bar">
-                    <motion.div 
+                    <motion.div
                       className="progress-fill"
                       animate={{ width: `${scanProgress}%` }}
                     />
@@ -315,7 +315,7 @@ function App() {
                 </div>
               </div>
 
-              <button 
+              <button
                 className="btn-primary"
                 onClick={resetProcess}
               >
@@ -337,7 +337,7 @@ function App() {
       </main>
 
       <footer className="App-footer">
-        <p>© 2024 MotoSpect - Professional Automotive Diagnostics</p>
+        <p>© 2025 MotoSpect - Professional Automotive Diagnostics</p>
         <p>Support: 1-800-MOTOSPECT</p>
       </footer>
     </div>

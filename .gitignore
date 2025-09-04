@@ -35,6 +35,11 @@ MANIFEST
 *.manifest
 *.spec
 .txt
+
+node_modules
+venv
+.venv
+env
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt

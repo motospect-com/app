@@ -43,22 +43,25 @@ const VehicleVisualization = () => {
     selectedChannelRef.current = selectedChannel;
   }, [selectedChannel]);
 
-  const httpBase =
-    process.env.REACT_APP_BACKEND_HTTP_URL || `http://${window.location.hostname}:8084`;
+    // Backend base URL – prefer explicit env var, fallback to current hostname:8000
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || `http://${window.location.hostname}:8000`;
+  const httpBase = backendUrl;
   const useMqtt = String(process.env.REACT_APP_USE_MQTT || 'false') === 'true';
-  const mqttUrl = process.env.REACT_APP_MQTT_URL || `ws://${window.location.hostname}:9001`;
+    const mqttUrl = process.env.REACT_APP_MQTT_URL || `ws://${window.location.hostname}:9002`;
   const mqttBaseTopic = process.env.REACT_APP_MQTT_BASE_TOPIC || 'motospect/v1';
 
   // Data ingress via WebSocket (fallback when MQTT is disabled)
   useEffect(() => {
     if (useMqtt) return undefined;
-    const wsUrl =
-      process.env.REACT_APP_BACKEND_WS_URL || `ws://${window.location.hostname}:8084/ws`;
+    
+        // Compute WebSocket endpoint based on backendUrl if not explicitly provided
+    const wsUrl = process.env.REACT_APP_BACKEND_WS_URL || `${backendUrl.replace(/^http/, 'ws')}/ws`;
+    
+    console.log(`[WebSocket] Connecting to ${wsUrl}`);
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-      // eslint-disable-next-line no-console
-      console.info('[WS] connected', wsUrl);
+            console.info('[WS] connected', wsUrl);
     };
 
     ws.onmessage = (event) => {

@@ -16,13 +16,21 @@ import numpy as np
 
 app = FastAPI()
 
+# Include WebSocket router for real-time data streaming
+from backend.websocket_handler import router as ws_router  # type: ignore
+app.include_router(ws_router)
+
 # CORS for local dev (React on different port)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",  # Frontend dev server
+        "http://localhost:8084",  # Backend port (if accessed directly)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Initialize services
