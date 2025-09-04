@@ -73,7 +73,10 @@ test-e2e:
 
 # Run backend tests locally
 test-backend:
-	cd backend && python3 -m pytest -v
+	@echo "Installing test dependencies..."
+	@pip3 install -q pytest pluggy pytest-asyncio numpy || echo "Dependencies already installed"
+	@echo "Running backend tests..."
+	cd backend && python3 -m pytest -v --tb=short
 
 # Test MQTT sensor simulation
 test-mqtt:
