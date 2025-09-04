@@ -23,11 +23,18 @@ async def websocket_endpoint(websocket: WebSocket):
     # Set CORS headers for WebSocket
     origin = websocket.headers.get('origin')
     allowed_origins = [
-        "http://localhost:3000",
-        "http://localhost:8084",
+        "http://localhost:3030",  # Frontend
+        "http://localhost:3040",  # Customer Portal
+        "http://frontend:3030",   # Frontend container
+        "http://motospect-frontend:3030",  # Frontend container (alternative)
+        "http://customer-portal:3040",     # Customer Portal container
+        "http://motospect-customer-portal:3040",  # Customer Portal container (alternative)
+        "http://localhost:3000",  # Development
+        "http://localhost:8084",  # Development alternative
     ]
     
-    if origin and origin not in allowed_origins:
+    # Allow all origins in development for easier testing
+    if origin and origin not in allowed_origins and "localhost" not in origin:
         print(f"WebSocket connection rejected: Origin {origin} not allowed")
         await websocket.close(code=1008)  # Policy Violation
         return

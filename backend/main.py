@@ -27,13 +27,17 @@ app.include_router(ws_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # Frontend dev server
-        "http://localhost:8084",  # Backend port (if accessed directly)
+        "http://localhost:3030",  # Frontend
+        "http://localhost:3040",  # Customer Portal
+        "http://frontend:3030",   # Frontend container
+        "http://motospect-frontend:3030",  # Frontend container (alternative)
+        "http://customer-portal:3040",     # Customer Portal container
+        "http://motospect-customer-portal:3040",  # Customer Portal container (alternative)
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
+    expose_headers=["*"],  # Expose all headers to the client
 )
 
 # Initialize services

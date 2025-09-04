@@ -7,6 +7,9 @@ import json
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 import re
+import asyncio
+import os
+import logging
 
 @dataclass
 class VehicleData:
@@ -38,11 +41,17 @@ class VINDecoder:
     
     NHTSA_API = "https://vpic.nhtsa.dot.gov/api/vehicles"
     
-    def __init__(self):
+    def __init__(self, timeout: float = 3.0):
+        """Initialize VINDecoder.
+
+        Args:
+            timeout (float): Maximum seconds to wait for outbound HTTP requests.
+        """
         self.session: Optional[aiohttp.ClientSession] = None
+        self.timeout = timeout
         
     async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
+        self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout))
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -76,11 +85,11 @@ class VINDecoder:
     async def _decode_nhtsa(self, vin: str) -> Optional[VehicleData]:
         """Decode using NHTSA government API"""
         if not self.session:
-            self.session = aiohttp.ClientSession()
+            self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout))
             
         try:
             url = f"{self.NHTSA_API}/DecodeVin/{vin}?format=json"
-            async with self.session.get(url) as response:
+            async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=self.timeout)) as response:
                 if response.status != 200:
                     return None
                     
@@ -144,6 +153,7 @@ class VINDecoder:
         # Manufacturer mapping
         manufacturer_map = {
             "1HG": ("Honda", "USA"),
+            "19X": ("Honda", "USA"),
             "JHM": ("Honda", "Japan"),
             "WBA": ("BMW", "Germany"),
             "5YJ": ("Tesla", "USA"),
@@ -204,6 +214,11 @@ class VINDecoder:
                 return "Civic"
             elif "CM" in vds:
                 return "Accord"
+        elif wmi.startswith("19X"):
+            if vds.startswith("FC"):
+                return "Civic"
+            elif vds.startswith("FA"):
+                return "Accord"
         elif wmi.startswith("WBA"):
             if vds[0] in ["F", "G"]:
                 return "3 Series"
@@ -220,11 +235,12 @@ class VINDecoder:
 class VehicleImageService:
     """Service to fetch vehicle images from various sources"""
     
-    def __init__(self):
+    def __init__(self, timeout: float = 3.0):
         self.session: Optional[aiohttp.ClientSession] = None
+        self.timeout = timeout
         
     async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
+        self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout))
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -253,11 +269,12 @@ class VehicleImageService:
 class PartsDatabase:
     """Parts and pricing database integration"""
     
-    def __init__(self):
+    def __init__(self, timeout: float = 3.0):
         self.session: Optional[aiohttp.ClientSession] = None
+        self.timeout = timeout
         
     async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
+        self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout))
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):

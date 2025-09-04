@@ -22,8 +22,8 @@ async def test_vehicle_database():
             db = VehicleDatabase()
             f.write("✓ VehicleDatabase initialized\n")
             
-            # Test VIN: 2020 Honda Civic
-            test_vin = "19XFC2F59LE000576"
+            # Test VIN: 2020 Honda Civic (corrected valid check digit)
+            test_vin = "19XFC2F52LE000576"
             
             # Test 1: Get comprehensive vehicle info
             f.write(f"\n1. Testing comprehensive vehicle info for VIN: {test_vin}\n")

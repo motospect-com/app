@@ -3,7 +3,7 @@ version: '3.8'
 # Common environment variables
 x-common: &common-vars
   FRONTEND_PORT: 3030
-  BACKEND_PORT: 8000
+  BACKEND_PORT: 8030
   CUSTOMER_PORTAL_PORT: 3040
   REPORT_SERVICE_PORT: 3050
   MQTT_PORT: 1884
@@ -12,8 +12,6 @@ x-common: &common-vars
 
 services:
   backend:
-    networks:
-      - motospect-network
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -44,8 +42,6 @@ services:
       start_period: 10s
 
   frontend:
-    networks:
-      - motospect-network
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -53,48 +49,50 @@ services:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
     environment:
       - PORT=${FRONTEND_PORT}
-      - REACT_APP_MQTT_URL=ws://host.docker.internal:${MQTT_WS_PORT}
+      - REACT_APP_MQTT_URL=ws://motospect-mosquitto:${MQTT_WS_PORT}
       - REACT_APP_MQTT_BASE_TOPIC=${MQTT_BASE_TOPIC}
-      - REACT_APP_BACKEND_URL=http://host.docker.internal:${BACKEND_PORT}
-      - REACT_APP_BACKEND_WS_URL=ws://host.docker.internal:${BACKEND_PORT}/ws
+      - REACT_APP_MQTT_USERNAME=${MQTT_USER:-motospect}
+      - REACT_APP_MQTT_PASSWORD=${MQTT_PASSWORD:-motospect123}
+      - REACT_APP_BACKEND_URL=http://localhost:${BACKEND_PORT}
+      - REACT_APP_BACKEND_WS_URL=ws://localhost:${BACKEND_PORT}/ws
       - REACT_APP_USE_MQTT=true
       - CHOKIDAR_USEPOLLING=true
+      - GENERATE_SOURCEMAP=false
     depends_on:
       - mosquitto
       - backend
     volumes:
       - ./frontend:/app
+      - /app/node_modules
     networks:
       - motospect-network
-      - /app/node_modules
     command: npm start
 
   customer-portal:
-    networks:
-      - motospect-network
     build: ./customer-portal
     container_name: motospect-customer-portal
     ports:
       - "${CUSTOMER_PORTAL_PORT}:${CUSTOMER_PORTAL_PORT}"
     environment:
       - PORT=${CUSTOMER_PORTAL_PORT}
-      - REACT_APP_BACKEND_URL=http://host.docker.internal:${BACKEND_PORT}
-      - REACT_APP_REPORT_URL=http://host.docker.internal:${REPORT_SERVICE_PORT}
-      - REACT_APP_MQTT_URL=ws://host.docker.internal:${MQTT_WS_PORT}
+      - REACT_APP_BACKEND_URL=http://localhost:${BACKEND_PORT}
+      - REACT_APP_REPORT_URL=http://motospect-report-service:${REPORT_SERVICE_PORT}
+      - REACT_APP_MQTT_URL=ws://motospect-mosquitto:${MQTT_WS_PORT}
       - REACT_APP_MQTT_BASE_TOPIC=${MQTT_BASE_TOPIC}
+      - REACT_APP_MQTT_USERNAME=${MQTT_USER:-motospect}
+      - REACT_APP_MQTT_PASSWORD=${MQTT_PASSWORD:-motospect123}
       - CHOKIDAR_USEPOLLING=true
+      - GENERATE_SOURCEMAP=false
     volumes:
       - ./customer-portal:/app
+      - /app/node_modules
     networks:
       - motospect-network
-      - /app/node_modules
     depends_on:
       - mosquitto
       - backend
 
   report-service:
-    networks:
-      - motospect-network
     build: ./report-service
     container_name: motospect-report-service
     ports:
@@ -104,9 +102,9 @@ services:
       - REACT_APP_BACKEND_URL=http://host.docker.internal:${BACKEND_PORT}
     volumes:
       - ./report-service:/app
+      - /app/node_modules
     networks:
       - motospect-network
-      - /app/node_modules
     command: npm start
 
   mosquitto:
@@ -114,7 +112,7 @@ services:
     container_name: motospect-mosquitto
     ports:
       - "${MQTT_PORT}:1883"         # MQTT TCP
-      - "${MQTT_WS_PORT}:9001"      # MQTT over WebSocket
+      - "${MQTT_WS_PORT}:9001"      # MQTT over WebSocket (matches mosquitto.conf)
     environment:
       - MOSQUITTO_USERNAME=${MQTT_USER:-motospect}
       - MOSQUITTO_PASSWORD=${MQTT_PASSWORD:-motospect123}
@@ -122,6 +120,13 @@ services:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
+    command: /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf
+    healthcheck:
+      test: ["CMD", "mosquitto_pub", "-h", "localhost", "-p", "1883", "-t", "$SYS/broker/uptime", "-m", "test", "-u", "${MQTT_USER:-motospect}", "-P", "${MQTT_PASSWORD:-motospect123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - motospect-network
     restart: unless-stopped

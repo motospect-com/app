@@ -14,7 +14,8 @@ async def test_vehicle_database():
     db = VehicleDatabase()
     
     # Test VIN: 2020 Honda Civic
-    test_vin = "19XFC2F59LE000576"
+    # Corrected VIN with valid check digit (2020 Honda Civic)
+    test_vin = "19XFC2F52LE000576"
     
     print("=" * 60)
     print("VEHICLE DATABASE INTEGRATION TEST")

@@ -35,6 +35,7 @@ MANIFEST
 *.manifest
 *.spec
 .txt
+test*.txt
 # Allow .env file but not .env.example
 !.env.example
 node_modules

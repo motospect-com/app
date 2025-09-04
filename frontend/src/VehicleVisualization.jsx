@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Client as MqttClient } from 'paho-mqtt';
 import SpectrumSVG from './components/SpectrumSVG';
 import ToFProfileSVG from './components/ToFProfileSVG';
+import config from './config';
 
 // Funkcja pomocnicza do mapowania wartości na kolor w gradiencie
 const mapValueToColor = (value, min, max) => {
@@ -32,7 +33,6 @@ const VehicleVisualization = () => {
   // Per-channel last frames for Live panels
   const [tofData, setTofData] = useState(null);
   const [thermalData, setThermalData] = useState(null);
-  const [uvData, setUvData] = useState(null);
   const [paintData, setPaintData] = useState(null);
   const [audioData, setAudioData] = useState(null);
 
@@ -54,14 +54,12 @@ const VehicleVisualization = () => {
   useEffect(() => {
     if (useMqtt) return undefined;
     
-        // Compute WebSocket endpoint based on backendUrl if not explicitly provided
-    const wsUrl = process.env.REACT_APP_BACKEND_WS_URL || `${backendUrl.replace(/^http/, 'ws')}/ws`;
-    
-    console.log(`[WebSocket] Connecting to ${wsUrl}`);
-    const ws = new WebSocket(wsUrl);
+    // Use WebSocket URL from config
+    const ws = new WebSocket(config.wsUrl);
+    console.log(`[WebSocket] Connecting to ${config.wsUrl}`);
 
     ws.onopen = () => {
-            console.info('[WS] connected', wsUrl);
+      console.info('[WS] connected to', config.wsUrl);
     };
 
     ws.onmessage = (event) => {
@@ -76,7 +74,8 @@ const VehicleVisualization = () => {
           setThermalData(data);
           break;
         case 'uv':
-          setUvData(data);
+          // UV data is no longer used, but we'll keep the case for future use
+          // setUvData(data);
           break;
         case 'paint_thickness':
           setPaintData(data);
@@ -94,12 +93,10 @@ const VehicleVisualization = () => {
     };
 
     ws.onerror = (e) => {
-      // eslint-disable-next-line no-console
       console.warn('[WS] error', e);
     };
 
     ws.onclose = () => {
-      // eslint-disable-next-line no-console
       console.info('[WS] closed');
     };
 
@@ -112,12 +109,48 @@ const VehicleVisualization = () => {
 
   // Data ingress via MQTT (preferred when enabled)
   useEffect(() => {
-    if (!useMqtt) return undefined;
+    if (!useMqtt) return;
+
     let client;
     try {
-      client = new MqttClient(mqttUrl, `ui-${Math.floor(Math.random() * 1e6)}`);
+      // Use MQTT URL from config
+      const clientId = `ui-${Math.floor(Math.random() * 1e6)}`;
+      
+      // Parse the WebSocket URL
+      const mqttUrl = new URL(config.mqtt.url);
+      const host = mqttUrl.hostname;
+      const port = mqttUrl.port || (mqttUrl.protocol === 'wss:' ? 443 : 80);
+      const path = mqttUrl.pathname || '/mqtt';
+      
+      console.log(`[MQTT] Connecting to ${host}:${port}${path} with client ID ${clientId}`);
+      
+      // Initialize MQTT client with proper WebSocket options
+      client = new MqttClient(host, Number(port), path, clientId);
+      
+      // Set username and password if provided
+      if (config.mqtt.username) {
+        client.connect({
+          onSuccess: () => {
+            console.log('[MQTT] Connected successfully');
+          },
+          onFailure: (err) => {
+            console.error('[MQTT] Connection failed', err);
+          },
+          userName: config.mqtt.username,
+          password: config.mqtt.password,
+          useSSL: config.mqtt.url.startsWith('wss')
+        });
+      } else {
+        client.connect({
+          onSuccess: () => {
+            console.log('[MQTT] Connected successfully');
+          },
+          onFailure: (err) => {
+            console.error('[MQTT] Connection failed', err);
+          }
+        });
+      }
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('[MQTT] Client init failed', e);
       return undefined;
     }
@@ -141,7 +174,8 @@ const VehicleVisualization = () => {
             setThermalData(data);
             break;
           case 'uv':
-            setUvData(data);
+            // UV data is no longer used, but we'll keep the case for future use
+            // setUvData(data);
             break;
           case 'paint_thickness':
             setPaintData(data);
@@ -236,18 +270,26 @@ const VehicleVisualization = () => {
     };
     window.addEventListener('resize', handleResize);
 
+    // Store the current ref values in the effect's closure
+    const currentMountRef = mountRef.current;
+    const currentRendererRef = rendererRef.current;
+    const currentGeometryRef = geometryRef.current;
+    const currentMaterialRef = materialRef.current;
+    const currentAnimationId = animationIdRef.current;
+    const currentPointsRef = pointsRef.current;
+    
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
-      if (pointsRef.current) {
-        if (geometryRef.current) geometryRef.current.dispose();
-        if (materialRef.current) materialRef.current.dispose();
+      if (currentAnimationId) cancelAnimationFrame(currentAnimationId);
+      if (currentPointsRef) {
+        if (currentGeometryRef) currentGeometryRef.dispose();
+        if (currentMaterialRef) currentMaterialRef.dispose();
       }
-      if (rendererRef.current && rendererRef.current.domElement && mountRef.current) {
+      if (currentRendererRef?.domElement && currentMountRef) {
         try {
-          mountRef.current.removeChild(rendererRef.current.domElement);
+          currentMountRef.removeChild(currentRendererRef.domElement);
         } catch (_) {}
-        rendererRef.current.dispose?.();
+        currentRendererRef.dispose?.();
       }
       sceneRef.current = null;
       cameraRef.current = null;

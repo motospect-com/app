@@ -94,13 +94,21 @@ python3 test_vehicle_db_direct.py
 }
 ```
 
-## Test Vehicle
+## Test Vehicles
 - **VIN**: 1HGBH41JXMN109186
 - **Make**: Honda
 - **Model**: Accord
 - **Year**: 2021
 - **Engine**: 2.0L
 - **Mileage**: 45,000
+
+### 2020 Honda Civic
+- **VIN**: 19XFC2F52LE000576
+- **Make**: Honda
+- **Model**: Civic
+- **Year**: 2020
+- **Engine**: 2.0L
+- **Mileage**: 30,000
 
 ## Expected Results
 - All API endpoints responsive
