@@ -1,19 +1,42 @@
-# Użyj oficjalnego obrazu Python
+# Build stage
+FROM python:3.9-slim as builder
+
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=100
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends gcc python3-dev
+
+# Copy only requirements first to leverage Docker cache
+COPY requirements*.txt ./
+
+# Install dependencies in a virtual environment
+RUN pip install --user -r requirements.txt -r requirements-dev.txt
+
+# Final stage
 FROM python:3.9-slim
 
-# Dodaj ścieżkę do zainstalowanych pakietów do PATH
-ENV PATH="/root/.local/bin:${PATH}"
-
-# Ustaw katalog roboczy
 WORKDIR /app
 
-# Skopiuj pliki z zależnościami i zainstaluj je
-COPY requirements.txt requirements.txt
-COPY requirements-dev.txt requirements-dev.txt
-RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
-
-# Skopiuj resztę kodu aplikacji
+# Copy only necessary files from builder
+COPY --from=builder /root/.local /root/.local
+COPY --from=builder /app/requirements*.txt ./
 COPY . .
 
-# FastAPI domyślnie działa na porcie 8000
+# Ensure scripts in .local are usable
+ENV PATH="/root/.local/bin:${PATH}"
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+# Expose the port the app runs on
 EXPOSE 8000
+
+# Command to run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

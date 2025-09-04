@@ -1,20 +1,37 @@
-# Użyj oficjalnego obrazu Node.js
-FROM node:18
+# Build stage
+FROM node:18-alpine as builder
 
-# Ustaw katalog roboczy
 WORKDIR /app
 
-# Skopiuj package.json i package-lock.json
+# Copy package files
 COPY package*.json ./
 
-# Zainstaluj zależności
-RUN npm install
+# Install dependencies
+RUN npm ci --only=production
 
-# Skopiuj resztę kodu aplikacji
+# Copy source code
 COPY . .
 
-# React domyślnie działa na porcie 3000
+# Build the app
+RUN npm run build
+
+# Production stage
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install serve to run the app
+RUN npm install -g serve
+
+# Copy built app from builder
+COPY --from=builder /app/build ./build
+
+# Copy only production dependencies
+COPY --from=builder /app/package*.json ./
+RUN npm ci --only=production
+
+# Expose the port the app runs on
 EXPOSE 3000
 
-# Uruchom aplikację
-CMD ["npm", "start"]
+# Start the app
+CMD ["serve", "-s", "build", "-l", "3000"]
