@@ -74,6 +74,29 @@ graph TB
     BE --> PDF
 ```
 
+## Container Architecture
+
+### Optimization Highlights
+
+#### Backend Service
+- **Base Image**: Python 3.9-slim
+- **Package Manager**: UV (Ultra-Velocity) for faster dependency installation
+- **Multi-stage Build**: Reduces final image size
+- **Layer Caching**: Optimized for faster rebuilds
+- **Health Checks**: Built-in container health monitoring
+
+#### Frontend Service
+- **Base Image**: Node.js 18 Alpine
+- **Production Build**: Optimized static assets
+- **Multi-stage Build**: Smaller final image size
+- **Efficient Serving**: Using `serve` for static files
+
+#### Performance Features
+- **BuildKit**: Parallel builds and better caching
+- **Resource Limits**: CPU/Memory constraints for stability
+- **Volume Optimization**: Named volumes for dependency caching
+- **Minimal Context**: Optimized `.dockerignore` files
+
 ## Component Architecture
 
 ### 1. Frontend Services
