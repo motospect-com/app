@@ -17,7 +17,10 @@ import numpy as np
 app = FastAPI()
 
 # Include WebSocket router for real-time data streaming
-from backend.websocket_handler import router as ws_router  # type: ignore
+try:
+    from websocket_handler import router as ws_router  # Running as a script inside backend dir
+except ImportError:
+    from backend.websocket_handler import router as ws_router  # Package import when executed via "-m backend.main"
 app.include_router(ws_router)
 
 # CORS for local dev (React on different port)
