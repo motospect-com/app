@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-09-05T06:54:48.561362",
+  "timestamp": "2025-09-05T07:19:16.046982",
   "summary": {
     "total": 25,
     "passed": 24,
@@ -110,27 +110,27 @@
     {
       "test": "VIN Decoder Response Time",
       "passed": true,
-      "details": "0.004s"
+      "details": "0.003s"
     },
     {
       "test": "Fault Detector Response Time",
       "passed": true,
-      "details": "0.005s"
+      "details": "0.003s"
     },
     {
       "test": "Diagnostic Response Time",
       "passed": true,
-      "details": "0.007s"
+      "details": "0.003s"
     },
     {
       "test": "MQTT Bridge Response Time",
       "passed": true,
-      "details": "0.008s"
+      "details": "0.005s"
     },
     {
       "test": "Average Response Time",
       "passed": true,
-      "details": "0.005s"
+      "details": "0.003s"
     }
   ]
 }

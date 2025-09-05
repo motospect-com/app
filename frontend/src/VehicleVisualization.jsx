@@ -318,46 +318,24 @@ const VehicleVisualization = () => {
         // Only attempt to reconnect if component is still mounted
         if (isMounted) {
           reconnectTimeout = setTimeout(connectMqtt, 5000);
-            break;
-          case 'audio':
-            setAudioData(data);
-            break;
-          default:
-            break;
         }
-        if (channel === selectedChannelRef.current) {
-          setScanData(data);
-          setScanType(data.scan_type || 'N/A');
-        }
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('[MQTT] bad payload', e);
       }
     };
 
-    client.connect({
-      timeout: 5,
-      useSSL: mqttUrl.startsWith('wss://'),
-      onSuccess: () => {
-        // eslint-disable-next-line no-console
-        console.info('[MQTT] connected', mqttUrl);
-        try {
-          client.subscribe(`${mqttBaseTopic}/+`, { qos: 0 });
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.error('[MQTT] subscribe failed', e);
-        }
-      },
-      onFailure: (err) => {
-        // eslint-disable-next-line no-console
-        console.error('[MQTT] connect failed', err);
-      },
-    });
+    // Start connection attempt
+    connectMqtt();
 
+    // Cleanup function
     return () => {
-      try {
-        client.disconnect();
-      } catch (_) {}
+      isMounted = false;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      if (mqttClient && mqttClient.isConnected()) {
+        try {
+          mqttClient.disconnect();
+        } catch (_) {}
+      }
     };
   }, [useMqtt, mqttUrl, mqttBaseTopic]);
 

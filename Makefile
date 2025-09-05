@@ -1,11 +1,36 @@
 # MotoSpect Project Makefile
 # Vehicle diagnostic system for cars, vans, SUVs up to 3L engine capacity
 
-.PHONY: help build up down restart logs test test-e2e test-backend test-mqtt test-system test-api test-complete test-ansible clean install dev prod status quick-start dev-start microservices-start microservices-stop microservices-status microservices-verify run-tests run-e2e-tests start-services
+.PHONY: help build up down restart logs test test-e2e test-backend test-mqtt test-system test-api test-complete test-ansible clean install dev prod status quick-start dev-start microservices-start microservices-stop microservices-status microservices-verify run-tests run-e2e-tests start-services diagnose demo
 
-# Default target - show help
+# Utility commands
+.PHONY: diagnose
+diagnose:
+	@echo "🔍 Running diagnostics..."
+	@$(PYTHON) $(UTIL_SCRIPTS)/diagnose.py
+
+.PHONY: demo
+demo:
+	@echo "🎮 Running demo..."
+	@$(PYTHON) $(UTIL_SCRIPTS)/demo_microservices.py
+
+# Variables
+PYTHON := python3
+PIP := pip3
+DOCKER_COMPOSE := docker-compose
+DOCKER_COMPOSE_DEV := docker-compose -f docker-compose.dev.yml
+
+# Script directories
+SCRIPTS_DIR := scripts
+DOCKER_SCRIPTS := $(SCRIPTS_DIR)/docker
+MICROSERVICE_SCRIPTS := $(SCRIPTS_DIR)/microservices
+TEST_SCRIPTS := $(SCRIPTS_DIR)/testing
+UTIL_SCRIPTS := $(SCRIPTS_DIR)/utils
+
+# Help target
+.PHONY: help
 help:
-	@echo "MotoSpect System Commands:"
+	@echo "MOTOSPECT Makefile Commands:"
 	@echo "  make quick-start - Szybkie uruchomienie bez budowania (30s)"
 	@echo "  make dev-start  - Development mode z cache (60s)"
 	@echo "  make install    - Install Python dependencies"
@@ -38,19 +63,14 @@ help:
 	@echo "  make dev        - Start in development mode"
 	@echo "  make prod       - Start in production mode"
 	@echo "  make clean      - Clean up artifacts"
+	@echo "  make diagnose   - Run diagnostics"
+	@echo "  make demo       - Run demo"
 
-# Szybkie uruchomienie - bez budowania Docker (30s)
+# Quick start
+.PHONY: quick-start
 quick-start:
-	@echo "🚀 Uruchamianie MOTOSPECT - tryb szybki..."
-	-@pkill -f "python.*8030" 2>/dev/null
-	-@pkill -f "node.*3030" 2>/dev/null
-	-@pkill -f "node.*3040" 2>/dev/null
-	@mkdir -p logs
-	@echo "Backend (port 8030): http://localhost:8030"
-	@cd backend && nohup python3 test_server.py > ../logs/backend.log 2>&1 &
-	@sleep 2
-	@echo "✅ Backend uruchomiony na porcie 8030"
-	@echo "Sprawdź status: make status"
+	@echo "⚡ Quick start..."
+	@$(PYTHON) $(UTIL_SCRIPTS)/quick_start.py
 
 # Development mode z Docker cache (60s)
 dev-start:

@@ -9,26 +9,14 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install --production --prefer-offline --no-audit
 
-# Force cache invalidation with timestamp
-ARG CACHE_DATE=unknown
-RUN echo "Build date: ${CACHE_DATE}"
-
-# Copy source code with explicit paths to force fresh copy
-COPY ./src ./src
-COPY ./public ./public  
-COPY ./package.json ./package.json
-COPY ./package-lock.json ./package-lock.json
-
-# Clear any potential caches
-RUN rm -rf /root/.npm /tmp/* /var/tmp/* node_modules/.cache 2>/dev/null || true
+# Copy source code
+COPY . .
 
 # Set environment to production
 ENV NODE_ENV=production
-ENV DISABLE_ESLINT_PLUGIN=true
 
-# Build the app with cache clearing
-RUN npm cache clean --force && \
-    npm run build
+# Build the app
+RUN npm run build
 
 # Production stage
 FROM node:18-alpine
