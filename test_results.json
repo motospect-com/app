@@ -1,0 +1,136 @@
+{
+  "timestamp": "2025-09-05T06:54:48.561362",
+  "summary": {
+    "total": 25,
+    "passed": 24,
+    "failed": 1,
+    "success_rate": 96.0
+  },
+  "results": [
+    {
+      "test": "API Gateway Health",
+      "passed": true,
+      "details": "Status: healthy"
+    },
+    {
+      "test": "VIN Decoder Health",
+      "passed": true,
+      "details": "Status: healthy"
+    },
+    {
+      "test": "Fault Detector Health",
+      "passed": true,
+      "details": "Status: healthy"
+    },
+    {
+      "test": "Diagnostic Health",
+      "passed": true,
+      "details": "Status: healthy"
+    },
+    {
+      "test": "MQTT Bridge Health",
+      "passed": true,
+      "details": "Status: healthy"
+    },
+    {
+      "test": "VIN Validation (Valid)",
+      "passed": true,
+      "details": "VIN: 1HGBH41JXMN109186"
+    },
+    {
+      "test": "VIN Validation (Invalid)",
+      "passed": true,
+      "details": "Error detected: VIN must be 17 characters"
+    },
+    {
+      "test": "VIN Decoding",
+      "passed": true,
+      "details": "Honda Civic (2020)"
+    },
+    {
+      "test": "VIN Recalls",
+      "passed": true,
+      "details": "Total recalls: 0"
+    },
+    {
+      "test": "Fault Analysis",
+      "passed": true,
+      "details": "Health score: 85"
+    },
+    {
+      "test": "Fault Codes",
+      "passed": true,
+      "details": "Codes found: 2"
+    },
+    {
+      "test": "Diagnostic Report",
+      "passed": true,
+      "details": "Report ID: DIAG-001, Overall: 82"
+    },
+    {
+      "test": "Diagnostic Summary",
+      "passed": true,
+      "details": "Total: 156, Active: 3"
+    },
+    {
+      "test": "MQTT Status",
+      "passed": true,
+      "details": "Connected: True, Topics: 2"
+    },
+    {
+      "test": "MQTT Publish",
+      "passed": true,
+      "details": "Message ID: mqtt-001"
+    },
+    {
+      "test": "MQTT Subscribe",
+      "passed": false,
+      "details": "HTTP 404"
+    },
+    {
+      "test": "Services Status",
+      "passed": true,
+      "details": "4/4 services healthy"
+    },
+    {
+      "test": "Gateway VIN Routing",
+      "passed": true,
+      "details": "VIN decoded via gateway"
+    },
+    {
+      "test": "Gateway Fault Routing",
+      "passed": true,
+      "details": "Health: 85"
+    },
+    {
+      "test": "API Gateway Response Time",
+      "passed": true,
+      "details": "0.003s"
+    },
+    {
+      "test": "VIN Decoder Response Time",
+      "passed": true,
+      "details": "0.004s"
+    },
+    {
+      "test": "Fault Detector Response Time",
+      "passed": true,
+      "details": "0.005s"
+    },
+    {
+      "test": "Diagnostic Response Time",
+      "passed": true,
+      "details": "0.007s"
+    },
+    {
+      "test": "MQTT Bridge Response Time",
+      "passed": true,
+      "details": "0.008s"
+    },
+    {
+      "test": "Average Response Time",
+      "passed": true,
+      "details": "0.005s"
+    }
+  ]
+}

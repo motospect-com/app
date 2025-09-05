@@ -1,0 +1,91 @@
+{
+  "timestamp": "2025-09-05T06:56:36.202540",
+  "podsumowanie": {
+    "wszystkie": 20,
+    "zaliczone": 20,
+    "niezaliczone": 0,
+    "wskaznik_sukcesu": 100.0
+  },
+  "wyniki": [
+    {
+      "test": "API Gateway Health",
+      "passed": true
+    },
+    {
+      "test": "VIN Decoder Health",
+      "passed": true
+    },
+    {
+      "test": "Fault Detector Health",
+      "passed": true
+    },
+    {
+      "test": "Diagnostic Health",
+      "passed": true
+    },
+    {
+      "test": "MQTT Bridge Health",
+      "passed": true
+    },
+    {
+      "test": "VIN Validation",
+      "passed": true
+    },
+    {
+      "test": "VIN Decode",
+      "passed": true
+    },
+    {
+      "test": "Fault Analysis",
+      "passed": true
+    },
+    {
+      "test": "Fault Codes",
+      "passed": true
+    },
+    {
+      "test": "Diagnostic Report",
+      "passed": true
+    },
+    {
+      "test": "MQTT Status",
+      "passed": true
+    },
+    {
+      "test": "MQTT Publish",
+      "passed": true
+    },
+    {
+      "test": "Gateway Status",
+      "passed": true
+    },
+    {
+      "test": "Gateway VIN Route",
+      "passed": true
+    },
+    {
+      "test": "Gateway Fault Route",
+      "passed": true
+    },
+    {
+      "test": "API Gateway Performance",
+      "passed": true
+    },
+    {
+      "test": "VIN Decoder Performance",
+      "passed": true
+    },
+    {
+      "test": "Fault Detector Performance",
+      "passed": true
+    },
+    {
+      "test": "Diagnostic Performance",
+      "passed": true
+    },
+    {
+      "test": "MQTT Bridge Performance",
+      "passed": true
+    }
+  ]
+}
