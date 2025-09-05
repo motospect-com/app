@@ -10,7 +10,7 @@
 
 ## Faza 2: Implementacja Backendu
 
-- [ ] Utworzenie głównych modułów Pythona (`motospect_core.py`, `sensor_modules.py`, etc.)
+- [x] Utworzenie głównych modułów Pythona (`motospect_core.py`, `sensor_modules.py`, etc.)
 - [x] Implementacja logiki serwera FastAPI
 - [x] Definicja endpointów API (`/api/scan/start`, `/api/scan/{scan_id}/results`, `/api/scan/stop/{scan_id}`)
 - [x] Implementacja komunikacji WebSocket
@@ -20,7 +20,7 @@
 - [x] Inicjalizacja aplikacji React
 - [x] Stworzenie komponentu wizualizacji 3D (`VehicleVisualization.jsx`)
 - [x] Implementacja połączenia WebSocket z backendem
-- [ ] Stworzenie interfejsu użytkownika do sterowania skanowaniem i wyświetlania wyników (wersja rozszerzona)
+- [x] Stworzenie interfejsu użytkownika do sterowania skanowaniem i wyświetlania wyników (wersja rozszerzona)
 - [x] Dodane podstawowe sterowanie skanem (Start/Stop) i filtr kanałów w `VehicleVisualization.jsx`
 
 ## Faza 4: Testowanie i Wdrożenie

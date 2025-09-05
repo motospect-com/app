@@ -222,12 +222,7 @@ const VehicleVisualization = () => {
           reconnect: false, // We handle reconnection manually
           keepAliveInterval: 30,
           cleanSession: true,
-          mqttVersion: 4, // Use MQTT 3.1.1
-          protocol: mqttUrl.protocol.replace(':', ''),
-          wsOptions: {
-            protocol: 'mqtt',
-            rejectUnauthorized: false // Only for development
-          }
+          mqttVersion: 4 // Use MQTT 3.1.1
         };
         
         // Connect to the broker
@@ -280,38 +275,6 @@ const VehicleVisualization = () => {
             console.error('[MQTT] Error parsing message:', error);
           }
         };
-        
-        // Connect to the MQTT broker
-        client.connect({
-          onSuccess: () => {
-            if (!isMounted) {
-              if (client && client.isConnected()) client.disconnect();
-              return;
-            }
-            console.log('[MQTT] Connected successfully to', config.mqtt.url);
-            // Subscribe to topics after successful connection
-            try {
-              client.subscribe(`${mqttBaseTopic}/+`, { qos: 0 });
-              console.log(`[MQTT] Subscribed to ${mqttBaseTopic}/+`);
-            } catch (error) {
-              console.error('[MQTT] Error subscribing to topics:', error);
-            }
-          },
-          onFailure: (error) => {
-            console.error('[MQTT] Connection failed:', error.errorMessage);
-            // Only attempt to reconnect if component is still mounted
-            if (isMounted) {
-              reconnectTimeout = setTimeout(connectMqtt, 5000);
-            }
-          },
-          userName: config.mqtt.username,
-          password: config.mqtt.password,
-          useSSL: mqttUrl.protocol === 'wss:',
-          reconnect: false, // We handle reconnection manually
-          keepAliveInterval: 30,
-          cleanSession: true,
-          mqttVersion: 4, // Use MQTT 3.1.1
-        });
         
       } catch (error) {
         console.error('[MQTT] Error in MQTT setup:', error);

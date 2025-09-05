@@ -1,7 +1,7 @@
 # MotoSpect Project Makefile
 # Vehicle diagnostic system for cars, vans, SUVs up to 3L engine capacity
 
-.PHONY: help build up down restart logs test test-e2e test-backend test-mqtt test-system test-api test-complete test-ansible clean install dev prod status quick-start dev-start microservices-start microservices-stop microservices-status microservices-verify run-tests run-e2e-tests start-services diagnose demo
+.PHONY: help build up down restart logs test test-e2e test-backend test-mqtt test-system test-api test-complete test-ansible clean install dev prod status quick-start dev-start dev-down dev-up dev-restart dev-up-all dev-restart-all microservices-start microservices-stop microservices-status microservices-verify run-tests run-e2e-tests start-services diagnose demo
 
 # Utility commands
 .PHONY: diagnose
@@ -33,6 +33,11 @@ help:
 	@echo "MOTOSPECT Makefile Commands:"
 	@echo "  make quick-start - Szybkie uruchomienie bez budowania (30s)"
 	@echo "  make dev-start  - Development mode z cache (60s)"
+	@echo "  make dev-down   - Stop dev compose stack"
+	@echo "  make dev-up     - Build & start backend-dev + frontend-dev"
+	@echo "  make dev-restart - Down + up build backend-dev + frontend-dev"
+	@echo "  make dev-up-all - Build & start all dev services (backend, frontend, customer)"
+	@echo "  make dev-restart-all - Down + up build all dev services"
 	@echo "  make install    - Install Python dependencies"
 	@echo "  make build      - Build Docker images (powolne - 10+ min)"
 	@echo "  make up         - Start all services"
@@ -82,6 +87,26 @@ dev-start:
 	@echo "Frontend: http://localhost:3030"
 	@echo "Customer Portal: http://localhost:3040"
 
+# Dev Compose helpers (down / up selected services with build)
+.PHONY: dev-down dev-up dev-restart
+dev-down:
+	@echo "🛑 Stopping dev compose stack..."
+	docker-compose -f docker-compose.dev.yml down
+
+dev-up:
+	@echo "🚀 Building & starting backend-dev and frontend-dev..."
+	docker-compose -f docker-compose.dev.yml up -d --build backend-dev frontend-dev
+
+dev-restart: dev-down dev-up
+
+# Start all dev services (including customer portal)
+.PHONY: dev-up-all dev-restart-all
+dev-up-all:
+	@echo "🚀 Building & starting all dev services (backend, frontend, customer)..."
+	docker-compose -f docker-compose.dev.yml up -d --build backend-dev frontend-dev customer-portal-dev
+
+dev-restart-all: dev-down dev-up-all
+
 # Install dependencies
 install:
 	pip3 install -r backend/requirements.txt
@@ -126,8 +151,8 @@ test: test-backend test-api test-system test-e2e
 # Run E2E tests
 test-e2e:
 	@echo "Running E2E tests..."
-	@chmod +x run_e2e_tests.sh
-	@./run_e2e_tests.sh
+	@chmod +x $(DOCKER_SCRIPTS)/run_e2e_tests.sh
+	@$(DOCKER_SCRIPTS)/run_e2e_tests.sh
 
 # Run backend tests locally
 test-backend:
@@ -148,17 +173,17 @@ test-quick:
 # Test system integration
 test-system:
 	@echo "Running system integration tests..."
-	python3 test_system.py
+	$(PYTHON) $(TEST_SCRIPTS)/test_system.py
 
 # Test API and CORS
 test-api:
 	@echo "Testing API endpoints and CORS..."
-	python3 test_api_cors.py
+	$(PYTHON) $(TEST_SCRIPTS)/test_api_cors.py
 
 # Run complete system test
 test-complete:
 	@echo "Running complete system test..."
-	python3 test_complete_system.py
+	$(PYTHON) $(TEST_SCRIPTS)/test_complete_system.py
 
 # Run Ansible test playbook
 test-ansible:
@@ -176,13 +201,13 @@ status:
 # Microservices management
 microservices-start:
 	@echo "🚀 Starting MOTOSPECT microservices with .env configuration..."
-	@chmod +x start_microservices.sh
-	@./start_microservices.sh
+	@chmod +x $(MICROSERVICE_SCRIPTS)/start_microservices.sh
+	@$(MICROSERVICE_SCRIPTS)/start_microservices.sh
 
 microservices-stop:
 	@echo "🛑 Stopping MOTOSPECT microservices..."
-	@chmod +x stop_microservices.sh
-	@./stop_microservices.sh
+	@chmod +x $(MICROSERVICE_SCRIPTS)/stop_microservices.sh
+	@$(MICROSERVICE_SCRIPTS)/stop_microservices.sh
 
 microservices-status:
 	@echo "📊 Checking microservices health status..."
@@ -194,23 +219,23 @@ microservices-status:
 
 microservices-verify:
 	@echo "🔍 Verifying microservices can import properly..."
-	@python3 verify_microservices.py
+	@$(PYTHON) $(UTIL_SCRIPTS)/verify_microservices.py
 
 # Script execution targets
 run-tests:
 	@echo "🧪 Running test suite..."
-	@chmod +x run_tests.sh
-	@./run_tests.sh
+	@chmod +x $(DOCKER_SCRIPTS)/run_tests.sh
+	@$(DOCKER_SCRIPTS)/run_tests.sh
 
 run-e2e-tests:
 	@echo "🔄 Running E2E tests..."
-	@chmod +x run_e2e_tests.sh
-	@./run_e2e_tests.sh
+	@chmod +x $(DOCKER_SCRIPTS)/run_e2e_tests.sh
+	@$(DOCKER_SCRIPTS)/run_e2e_tests.sh
 
 start-services:
 	@echo "🔧 Starting services via start script..."
-	@chmod +x start_services.sh
-	@./start_services.sh
+	@chmod +x $(DOCKER_SCRIPTS)/start_services.sh
+	@$(DOCKER_SCRIPTS)/start_services.sh
 
 # Clean up artifacts
 clean:

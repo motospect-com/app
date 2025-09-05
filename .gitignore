@@ -1,4 +1,6 @@
 .idea
+backend.pid
+
 diagnostic*.json
 package*.json
 
